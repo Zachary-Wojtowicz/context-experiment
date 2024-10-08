@@ -1,0 +1,894 @@
+<!doctype html>
+
+<head>
+    <style type="text/css">
+
+        img {
+            height: 100px;
+            width: 100px;
+        }
+
+        .center {
+            margin: auto;
+            width: 975px;
+            height: 675px;
+        }
+
+
+        #banner {
+            font-size: 20px;
+            text-align:center;
+            margin-bottom:10px;
+        }
+
+
+        #sub-banner {
+            min-height: 30px;
+            font-size: 16px;
+            text-align:center;
+            margin-bottom:10px;
+        }
+
+
+        /* Container that holds everything */
+        .container {
+            display: flex;
+            justify-content: flex-start;  /* Align everything to the left */
+            align-items: center;
+            flex-wrap: wrap; /* Ensures the elements behave responsively */
+            gap: 20px; /* Add some space between the info-container and buttons */
+        }
+
+
+        /* Info container for stacking the info items */
+        .info-container {
+            display: flex;
+            flex-direction: column;  /* Stack the .info elements vertically */
+            justify-content: flex-start;  /* Align them to the top */
+            width: 400px; /* Set a fixed width to make it narrower */
+        }
+
+
+        /* Button container */
+        #button-container {
+            display: flex;
+            justify-content: flex-start; /* Align buttons to the left */
+            gap: 10px; /* Add space between the buttons */
+            margin-top: 5px; /* Add some space above the buttons */
+        }
+
+        .info {
+            font-size: 16px;  /* Adjust the size as necessary */
+            font-weight: bold;
+            margin-bottom: 0px;  /* Reduce space between the info elements */
+        }
+
+        /* Ensures the banner is centered */
+        .banner-container {
+            text-align: center;
+            flex-grow: 1;  /* Allows the banner container to take up available space for centering */
+        }
+
+        #banner {
+            font-size: 18px;  /* Adjust the size as necessary */
+            font-weight: bold;
+        }
+
+        #sub-banner {
+            margin-top: 10px;  /* Add space between the banner and sub-banner */
+            font-size: 18px;
+        }
+
+        .column {
+            float: left;
+        }
+
+        .left {
+            width: 100px;
+        }
+
+        .middle {
+            width: 350px;
+        }
+
+        .right {
+            width: 350px;
+        }
+
+        .tiny {
+            width:20px;
+            height:20px;
+        }
+
+        .text-input {
+            width: 250px;
+            height: 60px;
+            font-size: 16px;
+            resize: none;
+        }
+
+        #image-gallery {
+            display: flex;
+/*            border: 1px solid red;*/
+        }
+
+        .feedback-item {
+            margin-bottom: 15px;
+        }
+
+        .feedback-content {
+            display: flex;
+            align-items: center; 
+        }
+
+        .feedback-image {
+            margin-right: 5px;  /* Space between the image and the tiny element */
+        }
+
+        .tiny {
+            font-size: 20px;  /* Adjust the size of the tiny element */
+        }
+
+        .header-text {
+            margin: 0;  /* Remove any margin from the header to keep it close to the image */
+            text-align: left;
+        }
+
+        #sortable-left > div {
+            margin-bottom: 20px;
+        }
+
+        #sortable-right {
+            display: grid;
+            grid-template-columns: repeat(3, 100px); 
+            grid-template-rows: repeat(4, 100px);
+            gap: 10px; 
+            padding: 5px;
+        }
+
+        .draggable {
+            position: relative;
+            cursor: move;
+            width: 100px;
+            height: 100px;
+        }
+
+        .droppable {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            text-align: center;
+            vertical-align: middle;
+            border: 2px solid #b1b1b1;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .droppable img {
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            width: 100px;
+            height: 100px;
+        }
+
+        .header-text {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 0px;
+            margin-bottom: 0px;
+            font-size: 16px;
+        }
+
+        .drop-text {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: gray;
+            font-size: 16px;
+            pointer-events: none;
+
+        }
+
+        .draggable, .feedback-image {
+            border: 2px solid #ddd;
+            box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #prizes {
+            width: 150px
+        }
+
+        
+
+        .button {
+            background-color: #008CBA; /* blue */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+        }
+
+        button:disabled, button[disabled]{
+            border: 1px solid #999999;
+            background-color: #cccccc;
+            color: #666666;
+        }
+
+        #send_button {
+            display: inline-block;
+        }
+
+    </style>
+
+    <script type="text/javascript" src="https://unpkg.com/htmx.org@2.0.2"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.0/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+
+    <script>
+
+
+        $(document).ready(function() {
+
+            var url = new URL(window.location.href);
+            var username = url.searchParams.get("username");
+            var task = url.searchParams.get("task");
+            var condition = url.searchParams.get("condition");
+
+            var paused = false;
+            var timer = 60;
+
+            function initDrag(clone) {
+
+                let draggedFromSortableRight = false;
+                let originalIndex = -1; // Variable to store the original index
+                let cloneClone = clone;
+
+                $( ".draggable" ).draggable({
+                    start: function(event, ui) {
+                        // Check if the draggable was originally from #sortable-right
+                        draggedFromSortableRight = $(this).parent().attr('id') === 'sortable-right';
+
+                        // If it's from sortable-right, store the original index
+                        if (draggedFromSortableRight) {
+                            originalIndex = $(this).index();
+                        } else {
+                            // If it's from sortable-left, we don't need to clone it
+                            originalIndex = -1;  // Reset index as it won't be used for sortable-left to sortable-left move
+                        }
+                    },
+                    stop: function(event, ui) {
+                        // Call the function to update the image IDs after drag ends
+                        getIdsOfImages();
+                    },
+                    revert: function(droppableObj) {
+                        return !droppableObj;
+                    }
+                });
+
+
+                $( ".droppable" ).droppable({
+                    accept: function(draggable) {
+                        // Only accept the draggable if the droppable does not already contain a draggable element
+                        return $(this).children('.draggable').length === 0;
+                    },
+                    drop: function( event, ui ) {
+                        if ($(this).children('.draggable').length === 0) {
+                            // Move the dragged element to the droppable area
+                            $(ui.draggable).detach().css({top: 0, left: 0}).appendTo(this);
+
+                            // Only clone the element if it was dragged from #sortable-right
+                            if (draggedFromSortableRight&&cloneClone) {
+
+                                // Clone the dragged element
+                                var clone = $(ui.draggable).clone().addClass('cloned');
+
+                                // Find all children of #sortable-right
+                                var sortableRightChildren = $( "#sortable-right" ).children();
+
+                                // Insert the clone back at the original index in sortable-right
+                                if (originalIndex < sortableRightChildren.length) {
+                                    clone.insertBefore(sortableRightChildren.eq(originalIndex));
+                                } else {
+                                    // If it's the last element, append it
+                                    $( "#sortable-right" ).append(clone);
+                                }
+
+                                // Reapply draggable functionality to the cloned element
+                                clone.draggable({
+                                    start: function(event, ui) {
+                                        // Track the origin of the cloned draggable
+                                        draggedFromSortableRight = $(this).parent().attr('id') === 'sortable-right';
+                                        // Store the original index again when this clone is dragged
+                                        if (draggedFromSortableRight) {
+                                            originalIndex = $(this).index();
+                                        } else {
+                                            originalIndex = -1;
+                                        }
+                                    },
+                                    stop: function(event, ui) {
+                                        // Call the function after drag ends
+                                        getIdsOfImages();
+                                    },
+                                    revert: function(droppableObj) {
+                                        return !droppableObj;
+                                    }
+                                });
+
+                                // Mark the original draggable as having been moved to sortable-left
+                                $(ui.draggable).attr('data-moved', 'true');
+                            }
+
+                            // Update image IDs after successful drop
+                            getIdsOfImages();
+                        }
+                    }
+                });
+   
+            }
+
+
+            function addMessages(messages) {
+                for (const [key, value] of Object.entries(messages)) {
+                    $("#m"+key).val(value);
+                }
+            }
+
+
+            function getMessages() {
+                messageData = {
+                    "0": $('#m0').val(),
+                    "1": $('#m1').val(),
+                    "2": $('#m2').val()
+                };
+                return JSON.stringify(messageData);
+            }
+
+
+            function arrangePics(side, ordering) {
+                for (var i = 0; i < 12; i++) {
+                    if (i in ordering) {
+                        let image_src = "/static/image_" + ordering[i] + ".png";
+                        let imgElement = $("#" + side + i).children('img');
+                        imgElement.attr("src", image_src);
+                    } else {
+                        $("#" + side + i).remove();
+                    }
+                }
+            }
+
+            function setHeaders(s,name) {
+                for (var i = 0; i < 3; i++) {
+                    $("#"+s+String(i)).text(name + ' ' +String(i+1))
+                }
+            }
+
+
+            function feedback(feedbacks) {
+                for (const [key, value] of Object.entries(feedbacks)) {
+                    if (value) {
+                        $("#t"+key).text("\u2705");
+                    } else {
+                        $("#t"+key).text("\u26D4");
+                    }
+                }
+            }
+
+
+            function getIdsOfImages() {
+                var values = [];
+
+                // Loop through each droppable div inside the sortable-left
+                $('#sortable-left > div').each(function() {
+                    // Find all img elements inside draggable divs within the droppable
+                    let imgElements = $(this).find('div.draggable img');
+
+                    // Loop through each img element
+                    imgElements.each(function() {
+                        let imgSrc = $(this).attr("src");
+
+                        // Check if the imgSrc is valid (not null or empty)
+                        if (imgSrc && imgSrc.match(/image_(\d+)\.png/)) {
+                            // Extract the image ID using regex and push it to the values array
+                            let imgId = imgSrc.match(/image_(\d+)\.png/)[1];
+                            values.push(imgId);
+                        }
+                    });
+                });
+
+                // Create JSON object from the values array, allow duplicates
+                var jsonObj = {};
+                for (var i = 0; i < values.length; i++) {
+                    jsonObj[i] = values[i];
+                }
+
+                // Output the JSON object
+                $('#outputValues').val(JSON.stringify(jsonObj));
+            }
+
+
+            function updateCharacterCount() {
+                const textAreas = document.querySelectorAll('.text-input');
+                let totalChars = 0;
+
+                // Loop through all text areas and count the characters
+                textAreas.forEach((textarea) => {
+                    totalChars += textarea.value.length;
+                });
+
+                // Update the character count display
+                document.getElementById('charCount').textContent = totalChars;
+            }
+
+
+            function checkContainerOverflow() {
+                // Check if there are more than 4 items in the sortable-left
+                if ($('#sortable-left > div').length > 4) {
+                    // Look for the last empty image in the sortable-left
+                    let emptyImageDiv = $('#sortable-left > div').filter(function () {
+                        return $(this).find('img').attr('src') === '/static/image_question.png';
+                    }).last();
+
+                    if (emptyImageDiv.length > 0) {
+                        // If there is an empty image div, remove it
+                        emptyImageDiv.remove();
+                    } else {
+                        // If no empty image div, move the last element to the sortable area
+                        $('#sortable-left > div:last-child').appendTo('#sortable-right');
+                    }
+                }
+            }
+
+
+            function resetDraggable() {
+                $('.cloned').remove();
+
+                $('.draggable').each(function() {
+                    $(this).detach().css({
+                        'top': 0,
+                        'left': 0
+                    }).appendTo('#sortable-right');
+                });
+            }
+
+
+            function done() {
+                const message = JSON.stringify({
+                    type: "complete"
+                });
+                window.parent.postMessage(message,"*");
+            }
+
+
+            var socket = io();
+            // DOES THE BLOW NEED TO BE IN PLACE ON THE SERVER?
+            // var socket = io.connect('wss://science.zachary-wojtowicz.com');
+            socket.on('connect', function() {
+                socket.emit('connected', {'username': username, 'task': task, 'condition': condition});
+            });
+
+
+            socket.on('redirect', (dest) => {
+                window.location.href = dest;
+            });
+
+
+            socket.on('refresh', function() {
+                socket.emit('update', {'username': username, 'task': task});
+            });
+
+
+            socket.on('done', function() {
+                done()
+            });
+
+
+            socket.on('update', (data) => {
+
+                if (data.hasOwnProperty('pair')) {
+
+                    role = data['role'];
+                    turn = data['turn'];
+                    task = data['task'];
+                    clone = (data['task']=='test')
+
+                    $("#n-remaining").text(data['n_remaining']);
+
+                    $("#wait").hide();
+                    $("#game").show();
+                    $("#feedback-container").css('visibility', 'hidden');
+                    $("#send_button").prop("disabled", true);
+                    $('.text-input').attr('readonly',true);
+                    $("#sub-banner").text("");
+                    $("#reset_button").css('visibility', 'hidden');
+                    $("#send_button2").css('visibility', 'hidden');
+                    $("#send_button").text('Submit!');
+                    updateCharacterCount();
+
+                    if (role=='sender') {
+
+                        if (task=='test') {
+                            $('#m1, #m2').remove();
+                            $('#f1, #f2').remove();
+                            $('#k1, #k2').remove();
+                            $('#j1, #j2').remove();
+                            $('#t0, #t1, #t2').remove();
+                            $('#h1, #h2').remove();
+                            $("#x1, #x2").remove();
+                            $('#h0').text('Target');
+                            $('#feedback_header').text('Delivered');
+                        }
+
+                        setHeaders('h','Target')
+                        setHeaders('k','Guess')
+                        arrangePics("g",$.parseJSON(data['start_s']));
+                        arrangePics("x",$.parseJSON(data['targets']));
+
+                        if (turn==0) {
+                            
+                            $('.text-input').val('');
+                            $('.text-input').attr('readonly',false);
+                            $('#m0').attr('placeholder', 'Enter your message here...');
+                            $('#m1').attr('placeholder', 'Enter your message here...');
+                            $('#m2').attr('placeholder', 'Enter your message here...');
+                            $("#send_button").prop("disabled", false);
+                            
+                            if (task=='train') {
+                                $("#banner").text("Your Turn: Describe the target tiles.");
+                            } else {
+                                $("#banner").text("Send a message to your partner.");
+                            }
+
+                        } else if (turn==1) {
+
+                            $("#banner").text("Please wait for your partner to move.");
+
+                        } else if (turn==2) {
+
+                            
+                            if (task=='train') {
+
+                                $("#banner").text("Feedback.");
+                                $("#feedback-container").css('visibility', 'visible');
+                                arrangePics("f",$.parseJSON(data['move_2']))
+                                feedback(data['score'])
+                                addMessages($.parseJSON(data['move_1']));
+
+                            } else if (task=='test') {
+
+                                $("#banner").text("Your Turn: Decide to accept or challenge.");
+                                $("#feedback-container").css('visibility', 'visible');
+                                arrangePics("f",$.parseJSON(data['move_2']))
+                                feedback(data['score'])
+                                addMessages($.parseJSON(data['move_1']));
+                                $("#send_button").prop("disabled", false);
+                                $("#send_button2").css('visibility', 'visible');
+                                $("#send_button").text('Accept');
+
+                            }
+
+                        }
+
+                    } else if (role=='receiver') {
+
+                        setHeaders('h','Slot')
+                        setHeaders('k','Target')
+                        arrangePics("g",$.parseJSON(data['start_r']));
+                        getIdsOfImages();
+                        
+                        if (task=='train') {
+                            initDrag(false);
+                        } else {
+                            $('#m1, #m2').remove();
+                            $('#j1, #j2').remove();
+                            $('#h2').remove();
+                            $("#x2").remove();
+                            $('#h0').text('True Target');
+                            $('#h1').text('Tile to Deliver');
+                            initDrag(true);
+                        }
+
+                        if (turn==0) {
+
+                            resetDraggable();
+                            $("#banner").text("Please wait for your partner to move.");
+                            $('.text-input').val('');
+                            $(".draggable").draggable("disable");
+
+                        } else if (turn==1) {
+
+                            if (task=='train') {
+                                $("#banner").text("Your Turn: Guess the target sequence.");
+                            } else {
+                                $("#banner").text("Select both tiles.");
+                            }
+
+                            resetDraggable();
+                            addMessages($.parseJSON(data['move_1']));
+                            $(".draggable").draggable("enable");
+                            $("#reset_button").css('visibility', 'visible');
+
+                            $('#reset_button').click(function() {
+                                resetDraggable();
+                            });
+
+                            $("#send_button").prop("disabled", false);
+
+                        } else if (turn==2) {   
+
+                            $(".draggable").draggable("disable");
+                            addMessages($.parseJSON(data['move_1']));
+
+                            if (task=='train') {
+
+                                $("#banner").text("Feedback.");
+                                $("#feedback-container").css('visibility', 'visible');
+                                var groundTruth = $.parseJSON(data['targets']);
+                                var pics = Object.fromEntries(
+                                    Object.entries(groundTruth).filter(([key, value]) => ['0','1','2'].includes(key))
+                                    );
+                                arrangePics("f",pics)
+                                feedback(data['score'])
+
+                            } else {
+
+                                $("#banner").text("Please wait for your partner to move.");
+
+                            }
+
+                        }
+                    }
+
+
+                } else {
+
+                    $("#wait").show();
+                    $("#game").hide();
+
+                }
+
+            });
+
+
+            function submitMove(id) {
+
+                if (turn==2) {
+                    if (id=="send_button") {
+                        $("#m0").val('accept')
+                    } else if (id=="send_button2") {
+                        $("#m0").val('reject')
+                    }    
+                }
+
+                var jsonData;
+                var valid = true;
+
+                if (role=='sender') {
+
+                    jsonData = getMessages();
+
+                    foo = $.parseJSON(jsonData)
+
+                    if (!Object.values(foo).join('')) {
+                        valid = false;
+                        $("#sub-banner").text("Write messages for your partner.");
+                    }
+
+                } else if (role=='receiver') {
+
+                    jsonData = $('#outputValues').val();
+
+                    nTiles = Object.keys($.parseJSON(jsonData)).length
+
+                    if (task=='train' && nTiles<3) {
+                        valid = false;
+                        $("#sub-banner").text("Select 3 tiles to complete the puzzle.");
+                    } else if (task=='train' && nTiles<2) {
+                        valid = false;
+                        $("#sub-banner").text("Select 2 tiles to complete the puzzle.");
+                    }
+
+                }
+
+                if (valid) {
+                    socket.emit('move', {'text': jsonData, 'username': username, 'task': task});
+                    $("#send_button").prop("disabled", true);
+                }
+
+            }
+            
+
+            $(".button").click(function() {
+                submitMove($(this).attr('id'));
+            });
+
+
+            // Add event listeners to all text areas
+            const textAreas = document.querySelectorAll('.text-input');
+            textAreas.forEach((textarea) => {
+                textarea.addEventListener('input', updateCharacterCount);
+            });
+
+
+            // setInterval(function () {
+
+            //     if (!paused) {
+            //     timer -= 1;
+
+            //         if (timer > 0) {
+
+            //                 minutes = parseInt(timer / 60, 10);
+            //                 seconds = parseInt(timer % 60, 10);
+            //                 seconds = seconds < 10 ? "0" + seconds : seconds;
+            //                 $('#time-count').html(minutes + ":" + seconds)  
+
+            //             } else {
+
+            //                 paused = true;
+            //                 const message = JSON.stringify({
+            //                     type: "complete"
+            //                 });
+            //                 window.parent.postMessage(message,"*");
+
+            //             }
+
+            //     }
+
+            // }, 1000);
+
+        });
+
+
+    </script>
+
+</head>
+
+
+<body>
+
+    <div class="center">
+
+        <div id="wait">
+            
+            <h1 style="text-align:center;">Welcome!</h1>
+
+            <p style="text-align:center;">Please wait while we match you to a group of other participants. This process should only take a few minutes.</p>
+
+        </div>
+
+        <div id="game" hidden>
+
+
+        <div class="container">
+            <div class="banner-container">
+                <div id="banner"></div>
+                <div id="sub-banner"></div>
+            </div>
+        </div>
+
+            <div class="column left" id="feedback-gallery">
+
+                <div id="feedback-container">
+                    <div class="feedback-item">
+                        <h4 id="k0" class="header-text">Guess 1</h4>
+                        <div class="feedback-content">
+                            <div class="feedback-image" id="f0"><img src="" alt=""></div>
+                            <div class="tiny" id="t0">✔</div>
+                        </div>
+                    </div>
+                    <div class="feedback-item">
+                        <h4 id="k1" class="header-text">Guess 2</h4>
+                        <div class="feedback-content">
+                            <div class="feedback-image" id="f1"><img src="" alt=""></div>
+                            <div class="tiny" id="t1">✘</div>
+                        </div>
+                    </div>
+                    <div class="feedback-item">
+                        <h4 id="k2" class="header-text">Guess 3</h4>
+                        <div class="feedback-content">
+                            <div class="feedback-image" id="f2"><img src="" alt=""></div>
+                            <div class="tiny" id="t2">✔</div>
+                        </div>
+                    </div>
+                </div>
+                
+                
+            </div>
+
+            <div class="column middle" id="message-gallery">
+
+                <div style="text-align:center;">
+                    <h4 id="j0" class="header-text">Description 1</h4>
+                    <textarea id="m0" class="text-input" style="margin-bottom: 56px;"></textarea><br>
+
+                    <h4 id="j1" class="header-text">Description 2</h4>
+                    <textarea id="m1" class="text-input" style="margin-bottom: 56px;"></textarea><br>
+
+                    <h4 id="j2" class="header-text">Description 3</h4>
+                    <textarea id="m2" class="text-input"></textarea><br>
+                    
+                    <p class="info" style="margin-top: 30px;">Total characters: <span id="charCount">0</span></p>
+                </div>
+
+            </div>
+
+            <div id="image-gallery">
+
+                <div id="sortable-left">
+                    <div>
+                        <h4 id="h0" class="header-text">Target 1</h4>
+                        <div id="x0" class="droppable">
+                            <p class="drop-text">Drag tile here</p><img src="" alt="">
+                        </div>
+                    </div>
+                    <div>
+                        <h4 id="h1" class="header-text">Target 2</h4>
+                        <div id="x1" class="droppable">
+                            <p class="drop-text">Drag tile here</p><img src="" alt="">
+                        </div>
+                    </div>
+                    <div>
+                        <h4 id="h2" class="header-text">Target 3</h4>
+                        <div id="x2" class="droppable">
+                            <p class="drop-text">Drag tile here</p><img src="" alt="">
+                        </div>
+                    </div>
+
+                    
+
+                    <div id="outputDiv" hidden>
+                        <input id="outputValues" type="text" value="">
+                    </div>
+                </div>
+
+                <div style="text-align:center; margin-left: 60px;">
+
+                    <h4 class="header-text">Gallery</h4>
+                    
+                
+                    <div id="sortable-right">
+                        <div id="g0" class="draggable"><img src="" alt=""></div>
+                        <div id="g1" class="draggable"><img src="" alt=""></div>
+                        <div id="g2" class="draggable"><img src="" alt=""></div>
+                        <div id="g3" class="draggable"><img src="" alt=""></div>
+                        <div id="g4" class="draggable"><img src="" alt=""></div>
+                        <div id="g5" class="draggable"><img src="" alt=""></div>
+                        <div id="g6" class="draggable"><img src="" alt=""></div>
+                        <div id="g7" class="draggable"><img src="" alt=""></div>
+                        <div id="g8" class="draggable"><img src="" alt=""></div>
+                        <div id="g9" class="draggable"><img src="" alt=""></div>
+                        <div id="g10" class="draggable"><img src="" alt=""></div>
+                        <div id="g11" class="draggable"><img src="" alt=""></div>
+                    </div>
+
+                    <button id="reset_button" style="display: block; margin: 5px auto;">Reset Tiles</button>
+
+                </div>
+
+            </div>
+
+
+            <div class="container">
+                <div class="info-container" style="padding:5px;">
+                    
+                    <!-- <p class="info">Time to Move: <span id="time-count"></span></p> -->
+                    <p class="info">Rounds Remaining: <span id="n-remaining"></span></p>
+                </div>
+
+                <div id="button-container">
+                    <button id="send_button" class="button">Submit!</button>
+                    <button id="send_button2" class="button" style="margin-left: 50px;">Challenge</button>
+                </div>
+            </div>
+
+
+        </div>
+
+    </div>
+    
+</body>
