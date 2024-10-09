@@ -1,7 +1,5 @@
 from gevent import monkey
-monkey.patch_all()  # Apply gevent monkey patching
-# import eventlet
-# eventlet.monkey_patch()
+monkey.patch_all() 
 
 import logging
 import os, sqlite3, simplejson, json, random, time
@@ -34,7 +32,6 @@ app = Flask(__name__)
 app.secret_key = "super secret key"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///project.db"
 socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins="*")
-# socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
