@@ -205,7 +205,7 @@ def score_game(s1,s2):
     s1 = json.loads(s1)
     s2 = json.loads(s2)
     r = {}
-    for key in s2.keys():
+    for key in s1.keys():
         r[key] = (s1[key]==s2[key])
     return r
 
@@ -306,7 +306,7 @@ def move(data):
     emit('refresh', to=user.user)
     emit('refresh', to=user.partner)
 
-    if (game.turn==2 and game.task=='train') or (game.turn==2):
+    if (game.turn==2 and game.task=='train') or (game.turn==3):
         # wait 3 seconds
         if game.task=='train':
             time.sleep(7)
