@@ -106,8 +106,8 @@ def create_game(pair_num, task, n):
         start_r = random_images(9,9)
         targets = random_images(3,9)
     elif task == 'test':
-        start_s = random_images(12)
-        start_r = random_images(12)
+        start_s = random_images(12,12)
+        start_r = random_images(12,12)
         targets = random_images(1,12)
     elif task == 'done':
         targets = ''
