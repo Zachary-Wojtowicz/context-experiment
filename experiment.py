@@ -1,5 +1,7 @@
-import eventlet
-eventlet.monkey_patch()
+from gevent import monkey
+monkey.patch_all()  # Apply gevent monkey patching
+# import eventlet
+# eventlet.monkey_patch()
 
 import logging
 import os, sqlite3, simplejson, json, random, time
@@ -19,7 +21,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 ##################################################################
 
 
-n_rounds_train = 20
+n_rounds_train = 15
 n_rounds_test = 10
 
 
@@ -31,8 +33,8 @@ n_rounds_test = 10
 app = Flask(__name__)
 app.secret_key = "super secret key"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///project.db"
-# socketio = SocketIO(app, manage_session=False, async_mode='gevent', cors_allowed_origins="*")
-socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins="*")
+# socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
