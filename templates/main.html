@@ -479,7 +479,7 @@
                     socket = io('http://127.0.0.1:8000', { transports: ['websocket'], reconnect: true });
                 } else {
                     // Production environment
-                    socket = io.connect('wss://science.zachary-wojtowicz.com');
+                    socket = io.connect('wss://science.zachary-wojtowicz.com', { transports: ['websocket'], reconnect: true });
                 }
 
 
