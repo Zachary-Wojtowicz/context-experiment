@@ -20,10 +20,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 ##################################################################
 
 
-n_rounds_train = 15
-n_rounds_test = 10
+n_rounds = {'train':15, 'test':10}
 
-s_pair_timeout = 550
+s_pair_timeout = 300
 
 
 ##################################################################
@@ -71,10 +70,10 @@ class User(db.Model):
     pair: Mapped[int] = mapped_column(nullable=True)
     role: Mapped[str] = mapped_column(nullable=True)
     partner: Mapped[str] = mapped_column(nullable=True)
-    train_partner: Mapped[str] = mapped_column(nullable=True)
-    test_partner: Mapped[str] = mapped_column(nullable=True)
+    partner_train: Mapped[str] = mapped_column(nullable=True)
+    partner_test: Mapped[str] = mapped_column(nullable=True)
     task: Mapped[int]
-    condition: Mapped[int]
+    assignment: Mapped[int]
     time: Mapped[float] = mapped_column(nullable=True)
 
 
@@ -93,8 +92,9 @@ class Game(db.Model):
     move_3: Mapped[str] = mapped_column(nullable=True)
 
 
-with app.app_context():
-    db.create_all()
+if not os.path.isfile('./instance/project.db'):
+    with app.app_context():
+        db.create_all()
 
 
 ##################################################################
@@ -104,6 +104,7 @@ with app.app_context():
 
 def create_game(pair_num, task, n):
     app.logger.info(f'creating game; pair:{pair_num} task:{task} n:{n}')
+
     if task == 'train':
         start_s = random_images(9,9)
         start_r = random_images(9,9)
@@ -111,7 +112,10 @@ def create_game(pair_num, task, n):
     elif task == 'test':
         start_s = random_images(12,12)
         start_r = random_images(12,12)
-        targets = random_images(1,12)
+        # targets = random_images(1,12)
+        # hard code targets: 7 previously-seen and 3 new
+        test_sequence = [0,1,2,3,4,5,6,9,10,11]
+        targets = json.dumps({'0':str(test_sequence[n])})
     game = Game(
         pair = pair_num,
         task = task,
@@ -125,6 +129,8 @@ def create_game(pair_num, task, n):
     db.session.commit()
     return
 
+
+##################### NEED TO UPDATE FOR WHEN TASK IS TEST: USERS KEEP ROLES
 
 def create_pair(user_1,user_2,task):
     pair_users = [user_1,user_2]
@@ -145,17 +151,20 @@ def create_pair(user_1,user_2,task):
             user.partner = pair_users[i-1].user
         user.status = 'playing'
         app.logger.info('paired user: ' + user.user)
+        if task=='train':
+            user.partner_train = user.partner
+        elif task=='test':
+            user.partner_test = user.partner
     db.session.commit()
     time.sleep(.25)
     create_game(pair_num, task, 0)
     for i in [0, 1]:
         app.logger.info(f'refreshing user: {pair_users[i].user}')
         socketio.emit('refresh', room=pair_users[i].user)
-    return pair_num
+    return
 
 
-def process_user(username, task, condition):
-    # app.logger.info(f'processing user: {username} task: {task} condition: {condition}')
+def process_user(username, task, assignment):
     user = db.session.query(User).filter(User.user==username).first()
     if user is None:
         user = User(
@@ -164,21 +173,27 @@ def process_user(username, task, condition):
             role = None,
             pair = None,
             partner = None,
-            train_partner = None,
-            test_partner = None,
+            partner_train = None,
+            partner_test = None,
             task = task,
-            condition = condition,
+            assignment = assignment,
             time = time.time()
         )
         db.session.add(user)
     else:
+        user.task = task
         if user.time == None:
             user.time = time.time()
-        user.task = task
-        if user.status=='waiting':
-            return
-        elif user.status=='playing':
-            emit('refresh', to=user.user)
+        game = db.session.query(Game).filter(Game.pair==user.pair,Game.task==user.task).order_by(Game.i.desc()).first()
+        if game is not None:
+            if game.n + 1 < n_rounds[user.task]:
+                user.status=='playing'
+                emit('refresh', to=user.user)
+            else:
+                app.logger.info(f'Issuing done for user: {user.user} and partner: {user.partner}')
+                emit('done', to=user.user)
+        else:
+            user.status = 'waiting'
     db.session.commit()
 
 
@@ -186,18 +201,54 @@ def process_waiting():
     while True:
         with app.app_context(), app.test_request_context():
             users = db.session.query(User).filter(User.status=='waiting').all()
-            users_train = [user for user in users if user.task=='train']
-            users_test = [user for user in users if user.task=='test']
-            if len(users_train) >= 2:
-                create_pair(users_train[0],users_train[1],'train')
-            if len(users_test) >= 2:
-                create_pair(users_test[0],users_test[1],'test')
+            
+            # pair train users for each assignment type
+            for assignment_type in ['same','different']:
+                user_list = [user for user in users if user.task=='train' and user.assignment==assignment_type]
+                if len(user_list) >= 2:
+                    for i in range(0, len(user_list) - 1, 2):
+                        create_pair(user_list[i], user_list[i + 1], 'train')
+
+
+            # pair test users for the "same" assignment type 
+            user_list = [user for user in users if user.task=='test' and user.assignment=='same']
+            paired_users = set()
+            user_dict = {user.user: user for user in user_list}
+            for user_0 in user_list:
+                if user_0.user in paired_users:
+                    continue
+                partner_name = user_0.partner_train
+                if partner_name in user_dict and partner_name not in paired_users:
+                    user_1 = user_dict[partner_name] 
+                    create_pair(user_0, user_1, 'test')
+                    paired_users.add(user_0.user)
+                    paired_users.add(user_1.user)
+
+
+            # pair test users for the "different" assignment type
+            user_list = [user for user in users if user.task=='test' and user.assignment=='different']
+            paired_users = set()
+            user_dict = {user.user: user for user in user_list}
+            for user_0 in user_list:
+                if user_0.user in paired_users:
+                    continue
+                available_matches = [
+                    user for user in user_list
+                    if user != user_0 and user != user_dict[user_0.partner_train] and user.user not in paired_users
+                ]
+                if available_matches:
+                    user_1 = available_matches[0]
+                    create_pair(user_0, user_1, 'test')
+                    paired_users.add(user_0.user)
+                    paired_users.add(user_1.user)
+
+
             for user in users:
                 if user.time:
                     if time.time() - user.time > s_pair_timeout:
                         user.status = 'waiting'
                         user.time = None
-                        app.logger.info(f'timeout for user: {user.user}, task: {user.task}, condition: {user.condition}')
+                        app.logger.info(f'timeout for user: {user.user}, task: {user.task}, assignment: {user.assignment}')
                         socketio.emit('done', to=user.user)
                         db.session.commit()
                         time.sleep(.1)
@@ -227,10 +278,6 @@ def score_game(s1,s2):
 
 socketio.start_background_task(process_waiting)
 
-# scheduler = BackgroundScheduler()
-# job = scheduler.add_job(process_waiting, 'interval', seconds=2)
-# scheduler.start()
-
 
 ##################################################################
 ### routing
@@ -240,6 +287,7 @@ socketio.start_background_task(process_waiting)
 @app.route("/")
 def default():
     return 'welcome'
+
 
 @app.route("/main")
 def main():
@@ -258,9 +306,15 @@ def test():
 
 @socketio.on('connected')
 def handle_connected(data):
-    app.logger.info(f'socket connected for user: {data['username']}, task: {data['task']}, condition: {data['condition']}')
+    app.logger.info(f'socket connected for user: {data['username']}, task: {data['task']}, assignment: {data['assignment']}')
     join_room(data['username'])
-    process_user(data['username'], data['task'], data['condition'])
+    process_user(data['username'], data['task'], data['assignment'])
+
+
+@socketio.on('typing')
+def handle_typing(data):
+    partner = data['partner']
+    emit('notify_typing', to=partner)
 
 
 @socketio.on('update')
@@ -273,10 +327,10 @@ def update(data):
         if game is not None:
             app.logger.info(f'retrieved game: {game.i}, pair: {game.pair}, task: {game.task} for user: {user.user}')
             if game.task=='train':
-                n_remaining = n_rounds_train - game.n
+                n_remaining = n_rounds['train'] - game.n
             elif game.task=='test':
-                n_remaining = n_rounds_test - game.n
-            data = {'pair':game.pair, 'task':game.task, 'n':game.n, 'turn':game.turn, 'start_s':game.start_s, 'start_r':game.start_r, 'targets':game.targets, 'role':user.role, 'n_remaining':n_remaining}
+                n_remaining = n_rounds['test'] - game.n
+            data = {'pair':game.pair, 'task':game.task, 'n':game.n, 'turn':game.turn, 'start_s':game.start_s, 'start_r':game.start_r, 'targets':game.targets, 'role':user.role, 'partner':user.partner,  'n_remaining':n_remaining}
             if game.turn>=1:
                 data['move_1'] = game.move_1
             if game.turn>=2:
@@ -294,7 +348,7 @@ def move(data):
         game.move_1 = str(data['text'])
     elif game.turn==1:
         game.move_2 = str(data['text'])
-    elif game.turn==2 and game.task==1:
+    elif game.turn==2 and game.task=='test':
         game.move_3 = str(data['text'])
 
     # advance turn
@@ -306,14 +360,16 @@ def move(data):
     emit('refresh', to=user.partner)
 
     if (game.turn==2 and game.task=='train') or (game.turn==3):
-        # wait 6 seconds
         if game.task=='train':
-            time.sleep(6)
+            if sum(score_game(game.targets,game.move_2).values()) == 3:
+                time.sleep(3)
+            else:
+                time.sleep(7)
         
         # create new game
-        if game.task=='train' and (game.n + 1 < n_rounds_train):
+        if game.task=='train' and (game.n + 1 < n_rounds['train']):
             create_game(user.pair, 'train', game.n + 1)
-        elif game.task=='test' and (game.n + 1 < n_rounds_test):
+        elif game.task=='test' and (game.n + 1 < n_rounds['test']):
             create_game(user.pair, 'test', game.n + 1)
         else:
             partner = db.session.query(User).filter(User.user==user.partner).first()

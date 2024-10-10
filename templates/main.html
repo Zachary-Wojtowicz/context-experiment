@@ -14,19 +14,6 @@
             height: 675px;
         }
 
-        #banner {
-            font-size: 20px;
-            text-align:center;
-            margin-bottom:10px;
-        }
-
-        #sub-banner {
-            min-height: 30px;
-            font-size: 16px;
-            text-align:center;
-            margin-bottom:10px;
-        }
-
         /* Container that holds everything */
         .container {
             display: flex;
@@ -65,13 +52,25 @@
         }
 
         #banner {
-            font-size: 18px;  /* Adjust the size as necessary */
+            font-size: 18px;
             font-weight: bold;
+            margin-left: 70px;
+            text-align:center;
+            margin-bottom:10px;
+        }
+
+        #role {
+            font-size: 18px;
+            font-weight: bold;
+            text-align:center;
         }
 
         #sub-banner {
-            margin-top: 10px;  /* Add space between the banner and sub-banner */
+            margin-top: 10px;
             font-size: 18px;
+            min-height: 30px;
+            text-align:center;
+            margin-bottom:10px;
         }
 
         .column {
@@ -234,7 +233,7 @@
                 var url = new URL(window.location.href);
                 var username = url.searchParams.get("username");
                 var task = url.searchParams.get("task");
-                var condition = url.searchParams.get("condition");           
+                var assignment = url.searchParams.get("assignment");           
 
                 var intervalID;
                 var move_timeout = 60;
@@ -369,6 +368,7 @@
                     }
                 }
 
+
                 function setHeaders(s,name) {
                     for (var i = 0; i < 3; i++) {
                         $("#"+s+String(i)).text(name + ' ' +String(i+1))
@@ -464,15 +464,6 @@
                 }
 
 
-                function done() {
-                    console.log("finishing for " + username);
-                    const message = JSON.stringify({
-                        type: "complete"
-                    });
-                    window.parent.postMessage(message,"*");
-                }
-
-
                 var socket;
                 if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
                     // Local development
@@ -484,7 +475,7 @@
 
 
                 socket.on('connect', function() {
-                    socket.emit('connected', {'username': username, 'task': task, 'condition':condition});
+                    socket.emit('connected', {'username': username, 'task': task, 'assignment':assignment});
                 });
 
 
@@ -495,7 +486,23 @@
 
 
                 socket.on('done', function() {
-                    done();
+                    console.log("finishing for " + username);
+                    const message = JSON.stringify({
+                        type: "complete"
+                    });
+                    window.parent.postMessage(message,"*");
+                });
+
+                var typingTimeout;
+
+                socket.on('notify_typing', function() {
+                    $('#sub-banner').text('Your partner is typing...');
+
+                    clearTimeout(typingTimeout);
+
+                    typingTimeout = setTimeout(function() {
+                        $('#sub-banner').text('');
+                    }, 2000);
                 });
 
 
@@ -505,10 +512,12 @@
 
                     if (data.hasOwnProperty('pair')) { 
 
+
                         role = data['role'];
                         turn = data['turn'];
                         task = data['task'];
                         clone = (data['task']=='test')
+                        partner = data['partner'];
 
                         $("#n-remaining").text(data['n_remaining']);
 
@@ -523,23 +532,33 @@
                         $("#send_button").text('Submit!');
                         $('#timer').css('visibility', 'hidden');
                         updateCharacterCount();
+                        $('#char-info').css('visibility', 'hidden');
 
                         if (role=='sender') {
 
+                            setHeaders('h','Target');
+                            setHeaders('k','Guess');
+                            $('#role').text('Your Role: Describer');
+
                             if (task=='test') {
                                 $('#m1, #m2').remove();
-                                $('#f1, #f2').remove();
-                                $('#k1, #k2').remove();
+                                $('#m0').attr('maxlength', '20');
+                                // show the middle feedback, i.e. the delivered tile
+                                $('#k0, #k2').remove();
+                                $('#k1').text('Delivered');
+                                $('#f0, #f2').remove();
+                                // // // // // // // //
                                 $('#j1, #j2').remove();
                                 $('#t0, #t1, #t2').remove();
                                 $('#h1, #h2').remove();
                                 $("#x1, #x2").remove();
                                 $('#h0').text('Target');
                                 $('#feedback_header').text('Delivered');
+                                $('#char-info').css('visibility', 'visible');
+
                             }
 
-                            setHeaders('h','Target');
-                            setHeaders('k','Guess');
+                            
                             arrangePics("g",$.parseJSON(data['start_s']));
                             arrangePics("x",$.parseJSON(data['targets']));
 
@@ -594,6 +613,8 @@
 
                         } else if (role=='receiver') {
 
+                            $('#role').text('Your Role: Selector');
+
                             setHeaders('h','Slot')
                             setHeaders('k','Target')
                             arrangePics("g",$.parseJSON(data['start_r']));
@@ -633,6 +654,7 @@
 
                                 $('#reset_button').click(function() {
                                     resetDraggable();
+                                    getIdsOfImages();
                                 });
 
                                 $("#send_button").prop("disabled", false);
@@ -690,8 +712,8 @@
                         if (id=="send_button") {
                             $("#m0").val('accept')
                         } else if (id=="send_button2") {
-                            $("#m0").val('reject')
-                        }    
+                            $("#m0").val('challenge')
+                        }
                     }
 
                     var jsonData;
@@ -717,7 +739,7 @@
                         if (task=='train' && nTiles<3) {
                             valid = false;
                             $("#sub-banner").text("Select 3 tiles to complete the puzzle.");
-                        } else if (task=='train' && nTiles<2) {
+                        } else if (task=='test' && nTiles<2) {
                             valid = false;
                             $("#sub-banner").text("Select 2 tiles to complete the puzzle.");
                         }
@@ -731,6 +753,11 @@
                     }
 
                 }
+
+
+                $('.text-input').on('input', function() {
+                    socket.emit('typing', {'partner': partner});
+                });
                 
 
                 $(".button").click(function() {
@@ -776,7 +803,6 @@
 
                 }
                 
-
             });
 
         });
@@ -811,7 +837,10 @@
 
         <div class="container">
             <div class="banner-container">
-                <div id="banner"></div>
+                <div>
+                    <span id="role"></span>
+                    <span id="banner"></span>
+                </div>
                 <div id="sub-banner"></div>
             </div>
         </div>
@@ -857,7 +886,7 @@
                     <h4 id="j2" class="header-text">Description 3</h4>
                     <textarea id="m2" class="text-input"></textarea><br>
                     
-                    <p class="info" style="margin-top: 30px;">Total characters: <span id="charCount">0</span></p>
+                    <p id="char-info" class="info" style="margin-top: 30px;">Total characters: <span id="charCount">0</span></p>
                 </div>
 
             </div>
