@@ -270,8 +270,8 @@ def update(data):
         data = {}
     else:
         game = db.session.query(Game).filter(Game.pair==user.pair,Game.task==user.task).order_by(Game.i.desc()).first()
-        app.logger.info(f'retrieved game: {game.i}, pair: {game.pair}, task: {game.task} for user: {user.user}')
         if game is not None:
+            app.logger.info(f'retrieved game: {game.i}, pair: {game.pair}, task: {game.task} for user: {user.user}')
             if game.task=='train':
                 n_remaining = n_rounds_train - game.n
             elif game.task=='test':
