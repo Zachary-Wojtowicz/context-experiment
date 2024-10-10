@@ -1,3 +1,4 @@
+import gevent
 from gevent import monkey
 monkey.patch_all() 
 
@@ -22,6 +23,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 n_rounds_train = 15
 n_rounds_test = 10
 
+s_pair_timeout = 550
+
 
 ##################################################################
 ### configure flask
@@ -31,7 +34,7 @@ n_rounds_test = 10
 app = Flask(__name__)
 app.secret_key = "super secret key"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///project.db"
-socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins="*")
+socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins="*", message_queue='redis://localhost:6379')
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
@@ -72,6 +75,7 @@ class User(db.Model):
     test_partner: Mapped[str] = mapped_column(nullable=True)
     task: Mapped[int]
     condition: Mapped[int]
+    time: Mapped[float] = mapped_column(nullable=True)
 
 
 @dataclass
@@ -108,8 +112,6 @@ def create_game(pair_num, task, n):
         start_s = random_images(12,12)
         start_r = random_images(12,12)
         targets = random_images(1,12)
-    elif task == 'done':
-        targets = ''
     game = Game(
         pair = pair_num,
         task = task,
@@ -147,11 +149,13 @@ def create_pair(user_1,user_2,task):
     time.sleep(.25)
     create_game(pair_num, task, 0)
     for i in [0, 1]:
+        app.logger.info(f'refreshing user: {pair_users[i].user}')
         socketio.emit('refresh', room=pair_users[i].user)
     return pair_num
 
 
 def process_user(username, task, condition):
+    # app.logger.info(f'processing user: {username} task: {task} condition: {condition}')
     user = db.session.query(User).filter(User.user==username).first()
     if user is None:
         user = User(
@@ -163,20 +167,18 @@ def process_user(username, task, condition):
             train_partner = None,
             test_partner = None,
             task = task,
-            condition = condition
+            condition = condition,
+            time = time.time()
         )
         db.session.add(user)
     else:
+        if user.time == None:
+            user.time = time.time()
         user.task = task
         if user.status=='waiting':
             return
         elif user.status=='playing':
             emit('refresh', to=user.user)
-        elif user.status=='done':
-            user.status = 'waiting'
-            app.logger.info(f'finishing for user : {data['username']}, task: {data['task']}, condition: {data['condition']}')
-            emit('done', to=user.user)
-            # emit('redirect', url_for('done'), to=user.user)
     db.session.commit()
 
 
@@ -190,6 +192,15 @@ def process_waiting():
                 create_pair(users_train[0],users_train[1],'train')
             if len(users_test) >= 2:
                 create_pair(users_test[0],users_test[1],'test')
+            for user in users:
+                if user.time:
+                    if time.time() - user.time > s_pair_timeout:
+                        user.status = 'waiting'
+                        user.time = None
+                        app.logger.info(f'timeout for user: {user.user}, task: {user.task}, condition: {user.condition}')
+                        socketio.emit('done', to=user.user)
+                        db.session.commit()
+                        time.sleep(.1)
         time.sleep(2)
 
 
@@ -235,11 +246,6 @@ def main():
     return render_template('main.html')
 
 
-@app.route('/done')
-def done():
-    return 'Done!'
-
-
 @app.route('/test')
 def test():
     return render_template('test.html')
@@ -264,24 +270,18 @@ def update(data):
         data = {}
     else:
         game = db.session.query(Game).filter(Game.pair==user.pair,Game.task==user.task).order_by(Game.i.desc()).first()
+        app.logger.info(f'retrieved game: {game.i}, pair: {game.pair}, task: {game.task} for user: {user.user}')
         if game is not None:
-            if game.task != 'done':
-                if game.task=='train':
-                    n_remaining = n_rounds_train - game.n
-                elif game.task=='test':
-                    n_remaining = n_rounds_test - game.n
-                elif game.task=='done':
-                    n_remaining = 0
-                data = {'pair':game.pair, 'task':game.task, 'n':game.n, 'turn':game.turn, 'start_s':game.start_s, 'start_r':game.start_r, 'targets':game.targets, 'role':user.role, 'n_remaining':n_remaining}
-                if game.turn>=1:
-                    data['move_1'] = game.move_1
-                if game.turn>=2:
-                    data['move_2'] = game.move_2
-                    data['score'] = score_game(game.targets,game.move_2)
-            else:
-                emit('done', to=user.user)
-                # emit('redirect', url_for('done'), to=user.user)
-                return
+            if game.task=='train':
+                n_remaining = n_rounds_train - game.n
+            elif game.task=='test':
+                n_remaining = n_rounds_test - game.n
+            data = {'pair':game.pair, 'task':game.task, 'n':game.n, 'turn':game.turn, 'start_s':game.start_s, 'start_r':game.start_r, 'targets':game.targets, 'role':user.role, 'n_remaining':n_remaining}
+            if game.turn>=1:
+                data['move_1'] = game.move_1
+            if game.turn>=2:
+                data['move_2'] = game.move_2
+                data['score'] = score_game(game.targets,game.move_2)
     emit('update', data, to=user.user)
 
 
@@ -306,9 +306,9 @@ def move(data):
     emit('refresh', to=user.partner)
 
     if (game.turn==2 and game.task=='train') or (game.turn==3):
-        # wait 3 seconds
+        # wait 6 seconds
         if game.task=='train':
-            time.sleep(7)
+            time.sleep(6)
         
         # create new game
         if game.task=='train' and (game.n + 1 < n_rounds_train):
@@ -316,11 +316,16 @@ def move(data):
         elif game.task=='test' and (game.n + 1 < n_rounds_test):
             create_game(user.pair, 'test', game.n + 1)
         else:
-            create_game(user.pair, 'done', 0)
-            user.status = 'done'
             partner = db.session.query(User).filter(User.user==user.partner).first()
-            partner.status = 'done'
+            for i in [user, partner]:
+                i.status = 'waiting'
+                i.time == None
             db.session.commit()
+
+            app.logger.info(f'Issuing done for user: {user.user} and partner: {user.partner}')
+            emit('done', to=user.user)
+            emit('done', to=user.partner)
+            return
 
         # refresh
         emit('refresh', to=user.user)

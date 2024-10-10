@@ -14,13 +14,11 @@
             height: 675px;
         }
 
-
         #banner {
             font-size: 20px;
             text-align:center;
             margin-bottom:10px;
         }
-
 
         #sub-banner {
             min-height: 30px;
@@ -28,7 +26,6 @@
             text-align:center;
             margin-bottom:10px;
         }
-
 
         /* Container that holds everything */
         .container {
@@ -39,7 +36,6 @@
             gap: 20px; /* Add some space between the info-container and buttons */
         }
 
-
         /* Info container for stacking the info items */
         .info-container {
             display: flex;
@@ -47,7 +43,6 @@
             justify-content: flex-start;  /* Align them to the top */
             width: 400px; /* Set a fixed width to make it narrower */
         }
-
 
         /* Button container */
         #button-container {
@@ -199,8 +194,6 @@
             width: 150px
         }
 
-        
-
         .button {
             background-color: #008CBA; /* blue */
             border: none;
@@ -232,514 +225,559 @@
 
     <script>
 
-
         $(document).ready(function() {
 
-            var url = new URL(window.location.href);
-            var username = url.searchParams.get("username");
-            var task = url.searchParams.get("task");
-            var condition = url.searchParams.get("condition");
+            $.getJSON('/static/trivia.json',function main(data) {
+                
+                var facts = data['facts'];
 
-            var paused = false;
-            var timer = 60;
+                var url = new URL(window.location.href);
+                var username = url.searchParams.get("username");
+                var task = url.searchParams.get("task");
+                var condition = url.searchParams.get("condition");           
 
-            function initDrag(clone) {
+                var intervalID;
+                var move_timeout = 60;
 
-                let draggedFromSortableRight = false;
-                let originalIndex = -1; // Variable to store the original index
-                let cloneClone = clone;
+                const randomItem = arr => arr.splice((Math.random() * arr.length) | 0, 1);
 
-                $( ".draggable" ).draggable({
-                    start: function(event, ui) {
-                        // Check if the draggable was originally from #sortable-right
-                        draggedFromSortableRight = $(this).parent().attr('id') === 'sortable-right';
+                $('#fact-display').html("Fun Fact: " +randomItem(facts));
 
-                        // If it's from sortable-right, store the original index
-                        if (draggedFromSortableRight) {
-                            originalIndex = $(this).index();
-                        } else {
-                            // If it's from sortable-left, we don't need to clone it
-                            originalIndex = -1;  // Reset index as it won't be used for sortable-left to sortable-left move
-                        }
-                    },
-                    stop: function(event, ui) {
-                        // Call the function to update the image IDs after drag ends
-                        getIdsOfImages();
-                    },
-                    revert: function(droppableObj) {
-                        return !droppableObj;
-                    }
+                $('#fact-button').click(function() {
+                    $('#fact-display').html("Fun Fact: " +randomItem(facts));
                 });
 
+                var paused = false;
+                // var timer = 10;
 
-                $( ".droppable" ).droppable({
-                    accept: function(draggable) {
-                        // Only accept the draggable if the droppable does not already contain a draggable element
-                        return $(this).children('.draggable').length === 0;
-                    },
-                    drop: function( event, ui ) {
-                        if ($(this).children('.draggable').length === 0) {
-                            // Move the dragged element to the droppable area
-                            $(ui.draggable).detach().css({top: 0, left: 0}).appendTo(this);
+                function initDrag(clone) {
 
-                            // Only clone the element if it was dragged from #sortable-right
-                            if (draggedFromSortableRight&&cloneClone) {
+                    let draggedFromSortableRight = false;
+                    let originalIndex = -1; // Variable to store the original index
+                    let cloneClone = clone;
 
-                                // Clone the dragged element
-                                var clone = $(ui.draggable).clone().addClass('cloned');
+                    $( ".draggable" ).draggable({
+                        start: function(event, ui) {
+                            // Check if the draggable was originally from #sortable-right
+                            draggedFromSortableRight = $(this).parent().attr('id') === 'sortable-right';
 
-                                // Find all children of #sortable-right
-                                var sortableRightChildren = $( "#sortable-right" ).children();
-
-                                // Insert the clone back at the original index in sortable-right
-                                if (originalIndex < sortableRightChildren.length) {
-                                    clone.insertBefore(sortableRightChildren.eq(originalIndex));
-                                } else {
-                                    // If it's the last element, append it
-                                    $( "#sortable-right" ).append(clone);
-                                }
-
-                                // Reapply draggable functionality to the cloned element
-                                clone.draggable({
-                                    start: function(event, ui) {
-                                        // Track the origin of the cloned draggable
-                                        draggedFromSortableRight = $(this).parent().attr('id') === 'sortable-right';
-                                        // Store the original index again when this clone is dragged
-                                        if (draggedFromSortableRight) {
-                                            originalIndex = $(this).index();
-                                        } else {
-                                            originalIndex = -1;
-                                        }
-                                    },
-                                    stop: function(event, ui) {
-                                        // Call the function after drag ends
-                                        getIdsOfImages();
-                                    },
-                                    revert: function(droppableObj) {
-                                        return !droppableObj;
-                                    }
-                                });
-
-                                // Mark the original draggable as having been moved to sortable-left
-                                $(ui.draggable).attr('data-moved', 'true');
+                            // If it's from sortable-right, store the original index
+                            if (draggedFromSortableRight) {
+                                originalIndex = $(this).index();
+                            } else {
+                                // If it's from sortable-left, we don't need to clone it
+                                originalIndex = -1;  // Reset index as it won't be used for sortable-left to sortable-left move
                             }
-
-                            // Update image IDs after successful drop
+                        },
+                        stop: function(event, ui) {
+                            // Call the function to update the image IDs after drag ends
                             getIdsOfImages();
-                        }
-                    }
-                });
-   
-            }
-
-
-            function addMessages(messages) {
-                for (const [key, value] of Object.entries(messages)) {
-                    $("#m"+key).val(value);
-                }
-            }
-
-
-            function getMessages() {
-                messageData = {
-                    "0": $('#m0').val(),
-                    "1": $('#m1').val(),
-                    "2": $('#m2').val()
-                };
-                return JSON.stringify(messageData);
-            }
-
-
-            function arrangePics(side, ordering) {
-                for (var i = 0; i < 12; i++) {
-                    if (i in ordering) {
-                        let image_src = "/static/image_" + ordering[i] + ".png";
-                        let imgElement = $("#" + side + i).children('img');
-                        imgElement.attr("src", image_src);
-                    } else {
-                        $("#" + side + i).remove();
-                    }
-                }
-            }
-
-            function setHeaders(s,name) {
-                for (var i = 0; i < 3; i++) {
-                    $("#"+s+String(i)).text(name + ' ' +String(i+1))
-                }
-            }
-
-
-            function feedback(feedbacks) {
-                for (const [key, value] of Object.entries(feedbacks)) {
-                    if (value) {
-                        $("#t"+key).text("\u2705");
-                    } else {
-                        $("#t"+key).text("\u26D4");
-                    }
-                }
-            }
-
-
-            function getIdsOfImages() {
-                var values = [];
-
-                // Loop through each droppable div inside the sortable-left
-                $('#sortable-left > div').each(function() {
-                    // Find all img elements inside draggable divs within the droppable
-                    let imgElements = $(this).find('div.draggable img');
-
-                    // Loop through each img element
-                    imgElements.each(function() {
-                        let imgSrc = $(this).attr("src");
-
-                        // Check if the imgSrc is valid (not null or empty)
-                        if (imgSrc && imgSrc.match(/image_(\d+)\.png/)) {
-                            // Extract the image ID using regex and push it to the values array
-                            let imgId = imgSrc.match(/image_(\d+)\.png/)[1];
-                            values.push(imgId);
+                        },
+                        revert: function(droppableObj) {
+                            return !droppableObj;
                         }
                     });
-                });
 
-                // Create JSON object from the values array, allow duplicates
-                var jsonObj = {};
-                for (var i = 0; i < values.length; i++) {
-                    jsonObj[i] = values[i];
+
+                    $( ".droppable" ).droppable({
+                        accept: function(draggable) {
+                            // Only accept the draggable if the droppable does not already contain a draggable element
+                            return $(this).children('.draggable').length === 0;
+                        },
+                        drop: function( event, ui ) {
+                            if ($(this).children('.draggable').length === 0) {
+                                // Move the dragged element to the droppable area
+                                $(ui.draggable).detach().css({top: 0, left: 0}).appendTo(this);
+
+                                // Only clone the element if it was dragged from #sortable-right
+                                if (draggedFromSortableRight&&cloneClone) {
+
+                                    // Clone the dragged element
+                                    var clone = $(ui.draggable).clone().addClass('cloned');
+
+                                    // Find all children of #sortable-right
+                                    var sortableRightChildren = $( "#sortable-right" ).children();
+
+                                    // Insert the clone back at the original index in sortable-right
+                                    if (originalIndex < sortableRightChildren.length) {
+                                        clone.insertBefore(sortableRightChildren.eq(originalIndex));
+                                    } else {
+                                        // If it's the last element, append it
+                                        $( "#sortable-right" ).append(clone);
+                                    }
+
+                                    // Reapply draggable functionality to the cloned element
+                                    clone.draggable({
+                                        start: function(event, ui) {
+                                            // Track the origin of the cloned draggable
+                                            draggedFromSortableRight = $(this).parent().attr('id') === 'sortable-right';
+                                            // Store the original index again when this clone is dragged
+                                            if (draggedFromSortableRight) {
+                                                originalIndex = $(this).index();
+                                            } else {
+                                                originalIndex = -1;
+                                            }
+                                        },
+                                        stop: function(event, ui) {
+                                            // Call the function after drag ends
+                                            getIdsOfImages();
+                                        },
+                                        revert: function(droppableObj) {
+                                            return !droppableObj;
+                                        }
+                                    });
+
+                                    // Mark the original draggable as having been moved to sortable-left
+                                    $(ui.draggable).attr('data-moved', 'true');
+                                }
+
+                                // Update image IDs after successful drop
+                                getIdsOfImages();
+                            }
+                        }
+                    });
+       
                 }
 
-                // Output the JSON object
-                $('#outputValues').val(JSON.stringify(jsonObj));
-            }
 
-
-            function updateCharacterCount() {
-                const textAreas = document.querySelectorAll('.text-input');
-                let totalChars = 0;
-
-                // Loop through all text areas and count the characters
-                textAreas.forEach((textarea) => {
-                    totalChars += textarea.value.length;
-                });
-
-                // Update the character count display
-                document.getElementById('charCount').textContent = totalChars;
-            }
-
-
-            function checkContainerOverflow() {
-                // Check if there are more than 4 items in the sortable-left
-                if ($('#sortable-left > div').length > 4) {
-                    // Look for the last empty image in the sortable-left
-                    let emptyImageDiv = $('#sortable-left > div').filter(function () {
-                        return $(this).find('img').attr('src') === '/static/image_question.png';
-                    }).last();
-
-                    if (emptyImageDiv.length > 0) {
-                        // If there is an empty image div, remove it
-                        emptyImageDiv.remove();
-                    } else {
-                        // If no empty image div, move the last element to the sortable area
-                        $('#sortable-left > div:last-child').appendTo('#sortable-right');
+                function addMessages(messages) {
+                    for (const [key, value] of Object.entries(messages)) {
+                        $("#m"+key).val(value);
                     }
                 }
-            }
 
 
-            function resetDraggable() {
-                $('.cloned').remove();
+                function getMessages() {
+                    messageData = {
+                        "0": $('#m0').val(),
+                        "1": $('#m1').val(),
+                        "2": $('#m2').val()
+                    };
+                    return JSON.stringify(messageData);
+                }
 
-                $('.draggable').each(function() {
-                    $(this).detach().css({
-                        'top': 0,
-                        'left': 0
-                    }).appendTo('#sortable-right');
+
+                function arrangePics(side, ordering) {
+                    for (var i = 0; i < 12; i++) {
+                        if (i in ordering) {
+                            let image_src = "/static/image_" + ordering[i] + ".png";
+                            let imgElement = $("#" + side + i).children('img');
+                            imgElement.attr("src", image_src);
+                        } else {
+                            $("#" + side + i).remove();
+                        }
+                    }
+                }
+
+                function setHeaders(s,name) {
+                    for (var i = 0; i < 3; i++) {
+                        $("#"+s+String(i)).text(name + ' ' +String(i+1))
+                    }
+                }
+
+
+                function feedback(feedbacks) {
+                    for (const [key, value] of Object.entries(feedbacks)) {
+                        if (value) {
+                            $("#t"+key).text("\u2705");
+                        } else {
+                            $("#t"+key).text("\u26D4");
+                        }
+                    }
+                }
+
+
+                function getIdsOfImages() {
+                    var values = [];
+
+                    // Loop through each droppable div inside the sortable-left
+                    $('#sortable-left > div').each(function() {
+                        // Find all img elements inside draggable divs within the droppable
+                        let imgElements = $(this).find('div.draggable img');
+
+                        // Loop through each img element
+                        imgElements.each(function() {
+                            let imgSrc = $(this).attr("src");
+
+                            // Check if the imgSrc is valid (not null or empty)
+                            if (imgSrc && imgSrc.match(/image_(\d+)\.png/)) {
+                                // Extract the image ID using regex and push it to the values array
+                                let imgId = imgSrc.match(/image_(\d+)\.png/)[1];
+                                values.push(imgId);
+                            }
+                        });
+                    });
+
+                    // Create JSON object from the values array, allow duplicates
+                    var jsonObj = {};
+                    for (var i = 0; i < values.length; i++) {
+                        jsonObj[i] = values[i];
+                    }
+
+                    // Output the JSON object
+                    $('#outputValues').val(JSON.stringify(jsonObj));
+                }
+
+
+                function updateCharacterCount() {
+                    const textAreas = document.querySelectorAll('.text-input');
+                    let totalChars = 0;
+
+                    // Loop through all text areas and count the characters
+                    textAreas.forEach((textarea) => {
+                        totalChars += textarea.value.length;
+                    });
+
+                    // Update the character count display
+                    document.getElementById('charCount').textContent = totalChars;
+                }
+
+
+                function checkContainerOverflow() {
+                    // Check if there are more than 4 items in the sortable-left
+                    if ($('#sortable-left > div').length > 4) {
+                        // Look for the last empty image in the sortable-left
+                        let emptyImageDiv = $('#sortable-left > div').filter(function () {
+                            return $(this).find('img').attr('src') === '/static/image_question.png';
+                        }).last();
+
+                        if (emptyImageDiv.length > 0) {
+                            // If there is an empty image div, remove it
+                            emptyImageDiv.remove();
+                        } else {
+                            // If no empty image div, move the last element to the sortable area
+                            $('#sortable-left > div:last-child').appendTo('#sortable-right');
+                        }
+                    }
+                }
+
+
+                function resetDraggable() {
+                    $('.cloned').remove();
+
+                    $('.draggable').each(function() {
+                        $(this).detach().css({
+                            'top': 0,
+                            'left': 0
+                        }).appendTo('#sortable-right');
+                    });
+                }
+
+
+                function done() {
+                    console.log("finishing for " + username);
+                    const message = JSON.stringify({
+                        type: "complete"
+                    });
+                    window.parent.postMessage(message,"*");
+                }
+
+
+                var socket;
+                if (window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost') {
+                    // Local development
+                    socket = io('http://127.0.0.1:8000', { transports: ['websocket'], reconnect: true });
+                } else {
+                    // Production environment
+                    socket = io.connect('wss://science.zachary-wojtowicz.com');
+                }
+
+
+                socket.on('connect', function() {
+                    socket.emit('connected', {'username': username, 'task': task, 'condition':condition});
                 });
-            }
 
 
-            function done() {
-                const message = JSON.stringify({
-                    type: "complete"
+                socket.on('refresh', function() {
+                    console.log('being refreshed...')
+                    socket.emit('update', {'username': username, 'task': task});
                 });
-                window.parent.postMessage(message,"*");
-            }
 
 
-            var socket = io();
-            // DOES THE BLOW NEED TO BE IN PLACE ON THE SERVER?
-            // var socket = io.connect('wss://science.zachary-wojtowicz.com');
-            socket.on('connect', function() {
-                socket.emit('connected', {'username': username, 'task': task, 'condition': condition});
-            });
+                socket.on('done', function() {
+                    done();
+                });
 
 
-            socket.on('redirect', (dest) => {
-                window.location.href = dest;
-            });
+                socket.on('update', (data) => {
+
+                    console.log('getting an update: ' + JSON.stringify(data))
+
+                    if (data.hasOwnProperty('pair')) { 
+
+                        role = data['role'];
+                        turn = data['turn'];
+                        task = data['task'];
+                        clone = (data['task']=='test')
+
+                        $("#n-remaining").text(data['n_remaining']);
+
+                        $("#wait").hide();
+                        $("#game").show();
+                        $("#feedback-container").css('visibility', 'hidden');
+                        $("#send_button").prop("disabled", true);
+                        $('.text-input').attr('readonly',true);
+                        $("#sub-banner").text("");
+                        $("#reset_button").css('visibility', 'hidden');
+                        $("#send_button2").css('visibility', 'hidden');
+                        $("#send_button").text('Submit!');
+                        $('#timer').css('visibility', 'hidden');
+                        updateCharacterCount();
+
+                        if (role=='sender') {
+
+                            if (task=='test') {
+                                $('#m1, #m2').remove();
+                                $('#f1, #f2').remove();
+                                $('#k1, #k2').remove();
+                                $('#j1, #j2').remove();
+                                $('#t0, #t1, #t2').remove();
+                                $('#h1, #h2').remove();
+                                $("#x1, #x2").remove();
+                                $('#h0').text('Target');
+                                $('#feedback_header').text('Delivered');
+                            }
+
+                            setHeaders('h','Target');
+                            setHeaders('k','Guess');
+                            arrangePics("g",$.parseJSON(data['start_s']));
+                            arrangePics("x",$.parseJSON(data['targets']));
+
+                            if (turn==0) {
+                                
+                                $('.text-input').val('');
+                                $('.text-input').attr('readonly',false);
+                                $('#m0').attr('placeholder', 'Enter your message here...');
+                                $('#m1').attr('placeholder', 'Enter your message here...');
+                                $('#m2').attr('placeholder', 'Enter your message here...');
+                                $("#send_button").prop("disabled", false);
+                                
+                                if (task=='train') {
+                                    $("#banner").text("Your Turn: Describe the target tiles.");
+                                } else {
+                                    $("#banner").text("Send a message to your partner.");
+                                }
+
+                                setMoveTimer(move_timeout);
+
+                            } else if (turn==1) {
+
+                                $("#banner").text("Please wait for your partner to move.");
+
+                            } else if (turn==2) {
+
+                                
+                                if (task=='train') {
+
+                                    $("#banner").text("Feedback.");
+                                    $("#feedback-container").css('visibility', 'visible');
+                                    arrangePics("f",$.parseJSON(data['move_2']))
+                                    feedback(data['score'])
+                                    addMessages($.parseJSON(data['move_1']));
+
+                                } else if (task=='test') {
+
+                                    $("#banner").text("Your Turn: Decide to accept or challenge.");
+                                    $("#feedback-container").css('visibility', 'visible');
+                                    arrangePics("f",$.parseJSON(data['move_2']))
+                                    feedback(data['score'])
+                                    addMessages($.parseJSON(data['move_1']));
+                                    $("#send_button").prop("disabled", false);
+                                    $("#send_button2").css('visibility', 'visible');
+                                    $("#send_button").text('Accept');
+
+                                    setMoveTimer(move_timeout);
+
+                                }
+
+                            }
+
+                        } else if (role=='receiver') {
+
+                            setHeaders('h','Slot')
+                            setHeaders('k','Target')
+                            arrangePics("g",$.parseJSON(data['start_r']));
+                            getIdsOfImages();
+                            
+                            if (task=='train') {
+                                initDrag(false);
+                            } else {
+                                $('#m1, #m2').remove();
+                                $('#j1, #j2').remove();
+                                $('#h2').remove();
+                                $("#x2").remove();
+                                $('#h0').text('True Target');
+                                $('#h1').text('Tile to Deliver');
+                                initDrag(true);
+                            }
+
+                            if (turn==0) {
+
+                                resetDraggable();
+                                $("#banner").text("Please wait for your partner to move.");
+                                $('.text-input').val('');
+                                $(".draggable").draggable("disable");
+
+                            } else if (turn==1) {
+
+                                if (task=='train') {
+                                    $("#banner").text("Your Turn: Guess the target sequence.");
+                                } else {
+                                    $("#banner").text("Select both tiles.");
+                                }
+
+                                resetDraggable();
+                                addMessages($.parseJSON(data['move_1']));
+                                $(".draggable").draggable("enable");
+                                $("#reset_button").css('visibility', 'visible');
+
+                                $('#reset_button').click(function() {
+                                    resetDraggable();
+                                });
+
+                                $("#send_button").prop("disabled", false);
+
+                                setMoveTimer(move_timeout);
+
+                            } else if (turn==2) {   
+
+                                $(".draggable").draggable("disable");
+                                addMessages($.parseJSON(data['move_1']));
+
+                                if (task=='train') {
+
+                                    $("#banner").text("Feedback.");
+                                    $("#feedback-container").css('visibility', 'visible');
+                                    var groundTruth = $.parseJSON(data['targets']);
+                                    var pics = Object.fromEntries(
+                                        Object.entries(groundTruth).filter(([key, value]) => ['0','1','2'].includes(key))
+                                        );
+                                    arrangePics("f",pics)
+                                    feedback(data['score'])
+
+                                } else {
+
+                                    $("#banner").text("Please wait for your partner to move.");
+
+                                }
+
+                            }
+                        }
 
 
-            socket.on('refresh', function() {
-                socket.emit('update', {'username': username, 'task': task});
-            });
+                    } else {
+
+                        $("#wait").show();
+                        $("#game").hide();
+
+                    }
+
+                });
+
+                
+                function randomMove() {
+                    if (turn==0) {
+                        $("#m0").val(' ')
+                    } else if (turn==1) {
+                        $('#outputValues').val('{"0":"1","1":"2","2":"3"}')
+                    }
+                }
 
 
-            socket.on('done', function() {
-                done()
-            });
+                function submitMove(id) {
 
+                    if (turn==2) {
+                        if (id=="send_button") {
+                            $("#m0").val('accept')
+                        } else if (id=="send_button2") {
+                            $("#m0").val('reject')
+                        }    
+                    }
 
-            socket.on('update', (data) => {
-
-                if (data.hasOwnProperty('pair')) {
-
-                    role = data['role'];
-                    turn = data['turn'];
-                    task = data['task'];
-                    clone = (data['task']=='test')
-
-                    $("#n-remaining").text(data['n_remaining']);
-
-                    $("#wait").hide();
-                    $("#game").show();
-                    $("#feedback-container").css('visibility', 'hidden');
-                    $("#send_button").prop("disabled", true);
-                    $('.text-input').attr('readonly',true);
-                    $("#sub-banner").text("");
-                    $("#reset_button").css('visibility', 'hidden');
-                    $("#send_button2").css('visibility', 'hidden');
-                    $("#send_button").text('Submit!');
-                    updateCharacterCount();
+                    var jsonData;
+                    var valid = true;
 
                     if (role=='sender') {
 
-                        if (task=='test') {
-                            $('#m1, #m2').remove();
-                            $('#f1, #f2').remove();
-                            $('#k1, #k2').remove();
-                            $('#j1, #j2').remove();
-                            $('#t0, #t1, #t2').remove();
-                            $('#h1, #h2').remove();
-                            $("#x1, #x2").remove();
-                            $('#h0').text('Target');
-                            $('#feedback_header').text('Delivered');
-                        }
+                        jsonData = getMessages();
 
-                        setHeaders('h','Target')
-                        setHeaders('k','Guess')
-                        arrangePics("g",$.parseJSON(data['start_s']));
-                        arrangePics("x",$.parseJSON(data['targets']));
+                        foo = $.parseJSON(jsonData)
 
-                        if (turn==0) {
-                            
-                            $('.text-input').val('');
-                            $('.text-input').attr('readonly',false);
-                            $('#m0').attr('placeholder', 'Enter your message here...');
-                            $('#m1').attr('placeholder', 'Enter your message here...');
-                            $('#m2').attr('placeholder', 'Enter your message here...');
-                            $("#send_button").prop("disabled", false);
-                            
-                            if (task=='train') {
-                                $("#banner").text("Your Turn: Describe the target tiles.");
-                            } else {
-                                $("#banner").text("Send a message to your partner.");
-                            }
-
-                        } else if (turn==1) {
-
-                            $("#banner").text("Please wait for your partner to move.");
-
-                        } else if (turn==2) {
-
-                            
-                            if (task=='train') {
-
-                                $("#banner").text("Feedback.");
-                                $("#feedback-container").css('visibility', 'visible');
-                                arrangePics("f",$.parseJSON(data['move_2']))
-                                feedback(data['score'])
-                                addMessages($.parseJSON(data['move_1']));
-
-                            } else if (task=='test') {
-
-                                $("#banner").text("Your Turn: Decide to accept or challenge.");
-                                $("#feedback-container").css('visibility', 'visible');
-                                arrangePics("f",$.parseJSON(data['move_2']))
-                                feedback(data['score'])
-                                addMessages($.parseJSON(data['move_1']));
-                                $("#send_button").prop("disabled", false);
-                                $("#send_button2").css('visibility', 'visible');
-                                $("#send_button").text('Accept');
-
-                            }
-
+                        if (!Object.values(foo).join('')) {
+                            valid = false;
+                            $("#sub-banner").text("Write messages for your partner.");
                         }
 
                     } else if (role=='receiver') {
 
-                        setHeaders('h','Slot')
-                        setHeaders('k','Target')
-                        arrangePics("g",$.parseJSON(data['start_r']));
-                        getIdsOfImages();
-                        
-                        if (task=='train') {
-                            initDrag(false);
-                        } else {
-                            $('#m1, #m2').remove();
-                            $('#j1, #j2').remove();
-                            $('#h2').remove();
-                            $("#x2").remove();
-                            $('#h0').text('True Target');
-                            $('#h1').text('Tile to Deliver');
-                            initDrag(true);
+                        jsonData = $('#outputValues').val();
+
+                        nTiles = Object.keys($.parseJSON(jsonData)).length
+
+                        if (task=='train' && nTiles<3) {
+                            valid = false;
+                            $("#sub-banner").text("Select 3 tiles to complete the puzzle.");
+                        } else if (task=='train' && nTiles<2) {
+                            valid = false;
+                            $("#sub-banner").text("Select 2 tiles to complete the puzzle.");
                         }
 
-                        if (turn==0) {
+                    }
 
-                            resetDraggable();
-                            $("#banner").text("Please wait for your partner to move.");
-                            $('.text-input').val('');
-                            $(".draggable").draggable("disable");
+                    if (valid) {
+                        clearInterval(intervalID);
+                        socket.emit('move', {'text': jsonData, 'username': username, 'task': task});
+                        $("#send_button").prop("disabled", true);
+                    }
 
-                        } else if (turn==1) {
+                }
+                
 
-                            if (task=='train') {
-                                $("#banner").text("Your Turn: Guess the target sequence.");
-                            } else {
-                                $("#banner").text("Select both tiles.");
-                            }
+                $(".button").click(function() {
+                    submitMove($(this).attr('id'));
+                });
 
-                            resetDraggable();
-                            addMessages($.parseJSON(data['move_1']));
-                            $(".draggable").draggable("enable");
-                            $("#reset_button").css('visibility', 'visible');
 
-                            $('#reset_button').click(function() {
-                                resetDraggable();
-                            });
+                // Add event listeners to all text areas
+                const textAreas = document.querySelectorAll('.text-input');
+                textAreas.forEach((textarea) => {
+                    textarea.addEventListener('input', updateCharacterCount);
+                });
 
-                            $("#send_button").prop("disabled", false);
 
-                        } else if (turn==2) {   
+                function setMoveTimer(timer) {
 
-                            $(".draggable").draggable("disable");
-                            addMessages($.parseJSON(data['move_1']));
+                    $('#timer').css('visibility', 'visible');
 
-                            if (task=='train') {
+                    intervalID = setInterval(function () {
 
-                                $("#banner").text("Feedback.");
-                                $("#feedback-container").css('visibility', 'visible');
-                                var groundTruth = $.parseJSON(data['targets']);
-                                var pics = Object.fromEntries(
-                                    Object.entries(groundTruth).filter(([key, value]) => ['0','1','2'].includes(key))
-                                    );
-                                arrangePics("f",pics)
-                                feedback(data['score'])
+                        if (!paused) {
+                        timer -= 1;
 
-                            } else {
+                            if (timer > 0) {
 
-                                $("#banner").text("Please wait for your partner to move.");
+                                    minutes = parseInt(timer / 60, 10);
+                                    seconds = parseInt(timer % 60, 10);
+                                    seconds = seconds < 10 ? "0" + seconds : seconds;
+                                    $('#time-count').html(minutes + ":" + seconds)  
 
-                            }
+                                } else {
+
+                                    randomMove();
+                                    submitMove(send_button);
+                                    clearInterval(intervalID);
+                                    $('#timer').css('visibility', 'hidden');
+
+                                }
 
                         }
-                    }
 
-
-                } else {
-
-                    $("#wait").show();
-                    $("#game").hide();
+                    }, 1000);
 
                 }
+                
 
             });
-
-
-            function submitMove(id) {
-
-                if (turn==2) {
-                    if (id=="send_button") {
-                        $("#m0").val('accept')
-                    } else if (id=="send_button2") {
-                        $("#m0").val('reject')
-                    }    
-                }
-
-                var jsonData;
-                var valid = true;
-
-                if (role=='sender') {
-
-                    jsonData = getMessages();
-
-                    foo = $.parseJSON(jsonData)
-
-                    if (!Object.values(foo).join('')) {
-                        valid = false;
-                        $("#sub-banner").text("Write messages for your partner.");
-                    }
-
-                } else if (role=='receiver') {
-
-                    jsonData = $('#outputValues').val();
-
-                    nTiles = Object.keys($.parseJSON(jsonData)).length
-
-                    if (task=='train' && nTiles<3) {
-                        valid = false;
-                        $("#sub-banner").text("Select 3 tiles to complete the puzzle.");
-                    } else if (task=='train' && nTiles<2) {
-                        valid = false;
-                        $("#sub-banner").text("Select 2 tiles to complete the puzzle.");
-                    }
-
-                }
-
-                if (valid) {
-                    socket.emit('move', {'text': jsonData, 'username': username, 'task': task});
-                    $("#send_button").prop("disabled", true);
-                }
-
-            }
-            
-
-            $(".button").click(function() {
-                submitMove($(this).attr('id'));
-            });
-
-
-            // Add event listeners to all text areas
-            const textAreas = document.querySelectorAll('.text-input');
-            textAreas.forEach((textarea) => {
-                textarea.addEventListener('input', updateCharacterCount);
-            });
-
-
-            // setInterval(function () {
-
-            //     if (!paused) {
-            //     timer -= 1;
-
-            //         if (timer > 0) {
-
-            //                 minutes = parseInt(timer / 60, 10);
-            //                 seconds = parseInt(timer % 60, 10);
-            //                 seconds = seconds < 10 ? "0" + seconds : seconds;
-            //                 $('#time-count').html(minutes + ":" + seconds)  
-
-            //             } else {
-
-            //                 paused = true;
-            //                 const message = JSON.stringify({
-            //                     type: "complete"
-            //                 });
-            //                 window.parent.postMessage(message,"*");
-
-            //             }
-
-            //     }
-
-            // }, 1000);
 
         });
 
@@ -757,7 +795,14 @@
             
             <h1 style="text-align:center;">Welcome!</h1>
 
-            <p style="text-align:center;">Please wait while we match you to a group of other participants. This process should only take a few minutes.</p>
+            <p style="text-align:center;">Please wait while we match you to a fellow participant. If this process takes more than 5 minutes, you will skip the task. Enjoy some trivia while you wait.</p>
+
+            <button id="fact-button" style="margin-top: 20px; margin-left: 300px;display: inline-block;">
+                New Fact
+            </button>
+            <div id="fact-display" style="display: inline-block;">
+                Fact content goes here
+            </div>
 
         </div>
 
@@ -839,9 +884,8 @@
                         </div>
                     </div>
 
-                    
-
                     <div id="outputDiv" hidden>
+                    <!-- <div id="outputDiv"> -->
                         <input id="outputValues" type="text" value="">
                     </div>
                 </div>
@@ -875,8 +919,7 @@
 
             <div class="container">
                 <div class="info-container" style="padding:5px;">
-                    
-                    <!-- <p class="info">Time to Move: <span id="time-count"></span></p> -->
+                    <p id="timer" class="info">Time to Move: <span id="time-count"></span></p>
                     <p class="info">Rounds Remaining: <span id="n-remaining"></span></p>
                 </div>
 
