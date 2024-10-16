@@ -20,8 +20,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 ##################################################################
 
 
-# n_rounds = {'train':15, 'test':10}
-n_rounds = {'train':3, 'test':3}
+n_rounds = {'train':15, 'test':10}
+# n_rounds = {'train':3, 'test':3}
 s_pair_timeout = 300
 
 
@@ -73,7 +73,7 @@ class User(db.Model):
     partner_train: Mapped[str] = mapped_column(nullable=True)
     partner_test: Mapped[str] = mapped_column(nullable=True)
     task: Mapped[int]
-    assignment: Mapped[int]
+    assignment: Mapped[str]
     time: Mapped[float] = mapped_column(nullable=True)
 
 
@@ -326,7 +326,7 @@ def update(data):
     else:
         game = db.session.query(Game).filter(Game.pair==user.pair,Game.task==user.task).order_by(Game.i.desc()).first()
         if game is not None:
-            app.logger.info(f'retrieved game: {game.i}, pair: {game.pair}, task: {game.task} for user: {user.user}')
+            app.logger.info(f'retrieved game: {game.i}, pair: {game.pair}, task: {game.task}, user: {user.user}')
             if game.task=='train':
                 n_remaining = n_rounds['train'] - game.n
             elif game.task=='test':

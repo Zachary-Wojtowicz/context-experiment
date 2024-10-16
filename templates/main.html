@@ -224,13 +224,14 @@
         $(document).ready(function() {
 
             $.getJSON('/static/trivia.json',function main(data) {
-                
+
                 var facts = data['facts'];
 
                 var url = new URL(window.location.href);
+                console.log('url: ' + url);
                 var username = url.searchParams.get("username");
                 var task = url.searchParams.get("task");
-                var assignment = url.searchParams.get("assignment");           
+                var assignment = url.searchParams.get("assignment");
 
                 var intervalID;
                 var move_timeout = 60;
@@ -338,7 +339,8 @@
 
                 function addMessages(messages) {
                     for (const [key, value] of Object.entries(messages)) {
-                        $("#m"+key).val(value);
+                        // $("#m"+key).val(value);
+                        $('#message-gallery .textbox:eq('+key+')').val(value)
                     }
                 }
 
@@ -352,18 +354,6 @@
                     return JSON.stringify(messageData);
                 }
 
-
-                // function arrangePics(side, ordering) {
-                //     for (var i = 0; i < 12; i++) {
-                //         if (i in ordering) {
-                //             let image_src = "/static/image_" + ordering[i] + ".png";
-                //             let imgElement = $("#" + side + i).children('img');
-                //             imgElement.attr("src", image_src);
-                //         } else {
-                //             $("#" + side + i).remove();
-                //         }
-                //     }
-                // }
 
                 function arrangePics(side, ordering) {
                     // Get the container element by its ID
@@ -558,9 +548,8 @@
                                 $('#message-gallery .textbox:gt(0)').remove();
                                 $('#message-gallery .textbox:eq(0)').attr('maxlength', '20');
                                 // show the middle feedback, i.e. the delivered tile
-                                $('#feedback-gallery .header:eq(2)').remove();
-                                $('#feedback-gallery .header:eq(0)').remove();
-                                $('#feedback-gallery .header:eq(1)').text('Delivered')
+                                $('#feedback-gallery .header:gt(0)').remove();
+                                $('#feedback-gallery .header:eq(0)').text('Delivered')
                                 $('#feedback-gallery .feedback-content:eq(2)').remove();
                                 $('#feedback-gallery .feedback-content:eq(0)').remove();
                                 // // // // // // // //
@@ -572,7 +561,6 @@
                                 $('#gallery-left .header:gt(0)').remove();
                                 $('#feedback_header').text('Delivered');
                                 $('#char-info').css('visibility', 'visible');
-
                             }
 
                             arrangePics("gallery-right",$.parseJSON(data['start_s']));
@@ -611,18 +599,22 @@
 
                                     $("#banner").text("Your Turn: Decide to accept or challenge.");
                                     $("#feedback-gallery").css('visibility', 'visible');
-                                    arrangePics("feedback-gallery",$.parseJSON(data['move_2']))
+                                    // hack! switch the picture indeces because we have deleted the other two feedback frames
+                                    myVar = {0:$.parseJSON(data['move_2'])[1]}
+                                    // // // // // // // //
+                                    arrangePics("feedback-gallery",myVar);
                                     feedback(data['score'])
                                     addMessages($.parseJSON(data['move_1']));
                                     $("#send_button").prop("disabled", false);
-                                    $("#send_button2").css('visibility', 'visible');
                                     $("#send_button").text('Accept');
+                                    $("#send_button2").css('visibility', 'visible');
 
                                 }
 
                             }
 
                         } else if (role=='receiver') {
+
 
                             $('#role').text('Your Role: Selector');
 
@@ -636,8 +628,8 @@
                             } else {
                                 $('#message-gallery .textbox:gt(0)').remove();
                                 $('#message-gallery .header:gt(0)').remove();
-                                $('#gallery-left .textbox:eq(0)').text('True Target');
-                                $('#gallery-left .textbox:eq(1)').text('Tile to Deliver');
+                                $('#gallery-left .header:eq(0)').text('True Target');
+                                $('#gallery-left .header:eq(1)').text('Tile to Deliver');
                                 $('#gallery-left .textbox:eq(2)').remove();
                                 $('#gallery-left .header:eq(2)').remove();
                                 $('#gallery-left .droppable:eq(2)').remove();
@@ -656,7 +648,7 @@
                                 if (task=='train') {
                                     $("#banner").text("Your Turn: Guess the target sequence.");
                                 } else {
-                                    $("#banner").text("Select both tiles.");
+                                    $("#banner").text("Your Turn: Select both tiles.");
                                 }
 
                                 resetDraggable();
