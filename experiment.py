@@ -20,8 +20,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 ##################################################################
 
 
-n_rounds = {'train':15, 'test':10}
-
+# n_rounds = {'train':15, 'test':10}
+n_rounds = {'train':3, 'test':3}
 s_pair_timeout = 300
 
 
@@ -232,9 +232,10 @@ def process_waiting():
             for user_0 in user_list:
                 if user_0.user in paired_users:
                     continue
+                partner_train_user = user_dict.get(user_0.partner_train)
                 available_matches = [
                     user for user in user_list
-                    if user != user_0 and user != user_dict[user_0.partner_train] and user.user not in paired_users
+                    if user != user_0 and user != partner_train_user and user.user not in paired_users
                 ]
                 if available_matches:
                     user_1 = available_matches[0]

@@ -94,7 +94,7 @@
             height:20px;
         }
 
-        .text-input {
+        .textbox {
             width: 250px;
             height: 60px;
             font-size: 16px;
@@ -106,33 +106,34 @@
 /*            border: 1px solid red;*/
         }
 
-        .feedback-item {
-            margin-bottom: 15px;
-        }
-
         .feedback-content {
             display: flex;
             align-items: center; 
+            margin-bottom: 15px;
         }
 
-        .feedback-image {
-            margin-right: 5px;  /* Space between the image and the tiny element */
-        }
+/*        .feedback-image {
+            margin-right: 5px;
+        }*/
 
         .tiny {
             font-size: 20px;  /* Adjust the size of the tiny element */
         }
 
-        .header-text {
+        .header {
             margin: 0;  /* Remove any margin from the header to keep it close to the image */
-            text-align: left;
+            text-align: center;
+            font-weight: bold;
+            margin-top: 0px;
+            margin-bottom: 0px;
+            font-size: 16px;
         }
 
-        #sortable-left > div {
+        #gallery-left > div {
             margin-bottom: 20px;
         }
 
-        #sortable-right {
+        #gallery-right {
             display: grid;
             grid-template-columns: repeat(3, 100px); 
             grid-template-rows: repeat(4, 100px);
@@ -165,12 +166,8 @@
             height: 100px;
         }
 
-        .header-text {
-            text-align: center;
-            font-weight: bold;
-            margin-top: 0px;
-            margin-bottom: 0px;
-            font-size: 16px;
+        .header {
+            
         }
 
         .drop-text {
@@ -184,7 +181,7 @@
 
         }
 
-        .draggable, .feedback-image {
+        .draggable, .feedback-content {
             border: 2px solid #ddd;
             box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
         }
@@ -257,15 +254,15 @@
 
                     $( ".draggable" ).draggable({
                         start: function(event, ui) {
-                            // Check if the draggable was originally from #sortable-right
-                            draggedFromSortableRight = $(this).parent().attr('id') === 'sortable-right';
+                            // Check if the draggable was originally from #gallery-right
+                            draggedFromSortableRight = $(this).parent().attr('id') === 'gallery-right';
 
-                            // If it's from sortable-right, store the original index
+                            // If it's from gallery-right, store the original index
                             if (draggedFromSortableRight) {
                                 originalIndex = $(this).index();
                             } else {
-                                // If it's from sortable-left, we don't need to clone it
-                                originalIndex = -1;  // Reset index as it won't be used for sortable-left to sortable-left move
+                                // If it's from gallery-left, we don't need to clone it
+                                originalIndex = -1;  // Reset index as it won't be used for gallery-left to gallery-left move
                             }
                         },
                         stop: function(event, ui) {
@@ -288,28 +285,28 @@
                                 // Move the dragged element to the droppable area
                                 $(ui.draggable).detach().css({top: 0, left: 0}).appendTo(this);
 
-                                // Only clone the element if it was dragged from #sortable-right
+                                // Only clone the element if it was dragged from #gallery-right
                                 if (draggedFromSortableRight&&cloneClone) {
 
                                     // Clone the dragged element
                                     var clone = $(ui.draggable).clone().addClass('cloned');
 
-                                    // Find all children of #sortable-right
-                                    var sortableRightChildren = $( "#sortable-right" ).children();
+                                    // Find all children of #gallery-right
+                                    var sortableRightChildren = $( "#gallery-right" ).children();
 
-                                    // Insert the clone back at the original index in sortable-right
+                                    // Insert the clone back at the original index in gallery-right
                                     if (originalIndex < sortableRightChildren.length) {
                                         clone.insertBefore(sortableRightChildren.eq(originalIndex));
                                     } else {
                                         // If it's the last element, append it
-                                        $( "#sortable-right" ).append(clone);
+                                        $( "#gallery-right" ).append(clone);
                                     }
 
                                     // Reapply draggable functionality to the cloned element
                                     clone.draggable({
                                         start: function(event, ui) {
                                             // Track the origin of the cloned draggable
-                                            draggedFromSortableRight = $(this).parent().attr('id') === 'sortable-right';
+                                            draggedFromSortableRight = $(this).parent().attr('id') === 'gallery-right';
                                             // Store the original index again when this clone is dragged
                                             if (draggedFromSortableRight) {
                                                 originalIndex = $(this).index();
@@ -326,7 +323,7 @@
                                         }
                                     });
 
-                                    // Mark the original draggable as having been moved to sortable-left
+                                    // Mark the original draggable as having been moved to gallery-left
                                     $(ui.draggable).attr('data-moved', 'true');
                                 }
 
@@ -348,30 +345,47 @@
 
                 function getMessages() {
                     messageData = {
-                        "0": $('#m0').val(),
-                        "1": $('#m1').val(),
-                        "2": $('#m2').val()
+                        "0": $('#message-gallery .textbox:eq(0)').val(),
+                        "1": $('#message-gallery .textbox:eq(1)').val(),
+                        "2": $('#message-gallery .textbox:eq(2)').val()
                     };
                     return JSON.stringify(messageData);
                 }
 
 
+                // function arrangePics(side, ordering) {
+                //     for (var i = 0; i < 12; i++) {
+                //         if (i in ordering) {
+                //             let image_src = "/static/image_" + ordering[i] + ".png";
+                //             let imgElement = $("#" + side + i).children('img');
+                //             imgElement.attr("src", image_src);
+                //         } else {
+                //             $("#" + side + i).remove();
+                //         }
+                //     }
+                // }
+
                 function arrangePics(side, ordering) {
-                    for (var i = 0; i < 12; i++) {
-                        if (i in ordering) {
-                            let image_src = "/static/image_" + ordering[i] + ".png";
-                            let imgElement = $("#" + side + i).children('img');
-                            imgElement.attr("src", image_src);
+                    // Get the container element by its ID
+                    let container = $("#" + side);
+                    
+                    // Loop through the images inside the container
+                    container.children('div').each(function(index) {
+                        if (index in ordering) {
+                            let image_src = "/static/image_" + ordering[index] + ".png";
+                            // Find the img tag inside the current child div and update its src
+                            $(this).children('img').attr("src", image_src);
                         } else {
-                            $("#" + side + i).remove();
+                            // Remove the div if no corresponding image is found
+                            $(this).remove();
                         }
-                    }
+                    });
                 }
 
 
                 function setHeaders(s,name) {
                     for (var i = 0; i < 3; i++) {
-                        $("#"+s+String(i)).text(name + ' ' +String(i+1))
+                        $('#'+s+' .header:eq('+i+')').text(name + ' ' +String(i+1))
                     }
                 }
 
@@ -379,9 +393,9 @@
                 function feedback(feedbacks) {
                     for (const [key, value] of Object.entries(feedbacks)) {
                         if (value) {
-                            $("#t"+key).text("\u2705");
+                            $('#feedback-gallery .tiny:eq('+key+')').text("\u2705");
                         } else {
-                            $("#t"+key).text("\u26D4");
+                            $('#feedback-gallery .tiny:eq('+key+')').text("\u26D4");
                         }
                     }
                 }
@@ -390,8 +404,8 @@
                 function getIdsOfImages() {
                     var values = [];
 
-                    // Loop through each droppable div inside the sortable-left
-                    $('#sortable-left > div').each(function() {
+                    // Loop through each droppable div inside the gallery-left
+                    $('#gallery-left > div').each(function() {
                         // Find all img elements inside draggable divs within the droppable
                         let imgElements = $(this).find('div.draggable img');
 
@@ -420,7 +434,7 @@
 
 
                 function updateCharacterCount() {
-                    const textAreas = document.querySelectorAll('.text-input');
+                    const textAreas = document.querySelectorAll('.textbox');
                     let totalChars = 0;
 
                     // Loop through all text areas and count the characters
@@ -434,10 +448,10 @@
 
 
                 function checkContainerOverflow() {
-                    // Check if there are more than 4 items in the sortable-left
-                    if ($('#sortable-left > div').length > 4) {
-                        // Look for the last empty image in the sortable-left
-                        let emptyImageDiv = $('#sortable-left > div').filter(function () {
+                    // Check if there are more than 4 items in the gallery-left
+                    if ($('#gallery-left > div').length > 4) {
+                        // Look for the last empty image in the gallery-left
+                        let emptyImageDiv = $('#gallery-left > div').filter(function () {
                             return $(this).find('img').attr('src') === '/static/image_question.png';
                         }).last();
 
@@ -446,7 +460,7 @@
                             emptyImageDiv.remove();
                         } else {
                             // If no empty image div, move the last element to the sortable area
-                            $('#sortable-left > div:last-child').appendTo('#sortable-right');
+                            $('#gallery-left > div:last-child').appendTo('#gallery-right');
                         }
                     }
                 }
@@ -459,7 +473,7 @@
                         $(this).detach().css({
                             'top': 0,
                             'left': 0
-                        }).appendTo('#sortable-right');
+                        }).appendTo('#gallery-right');
                     });
                 }
 
@@ -510,8 +524,7 @@
 
                     console.log('getting an update: ' + JSON.stringify(data))
 
-                    if (data.hasOwnProperty('pair')) { 
-
+                    if (data.hasOwnProperty('pair'))  { 
 
                         role = data['role'];
                         turn = data['turn'];
@@ -523,9 +536,9 @@
 
                         $("#wait").hide();
                         $("#game").show();
-                        $("#feedback-container").css('visibility', 'hidden');
+                        $('#feedback-gallery').css('visibility', 'hidden');
                         $("#send_button").prop("disabled", true);
-                        $('.text-input').attr('readonly',true);
+                        $('.textbox').attr('readonly',true);
                         $("#sub-banner").text("");
                         $("#reset_button").css('visibility', 'hidden');
                         $("#send_button2").css('visibility', 'hidden');
@@ -536,39 +549,40 @@
 
                         if (role=='sender') {
 
-                            setHeaders('h','Target');
-                            setHeaders('k','Guess');
+                            setHeaders('gallery-left','Target');
+                            setHeaders('feedback-gallery','Guess');
                             $('#role').text('Your Role: Describer');
 
+
                             if (task=='test') {
-                                $('#m1, #m2').remove();
-                                $('#m0').attr('maxlength', '20');
+                                $('#message-gallery .textbox:gt(0)').remove();
+                                $('#message-gallery .textbox:eq(0)').attr('maxlength', '20');
                                 // show the middle feedback, i.e. the delivered tile
-                                $('#k0, #k2').remove();
-                                $('#k1').text('Delivered');
-                                $('#f0, #f2').remove();
+                                $('#feedback-gallery .header:eq(2)').remove();
+                                $('#feedback-gallery .header:eq(0)').remove();
+                                $('#feedback-gallery .header:eq(1)').text('Delivered')
+                                $('#feedback-gallery .feedback-content:eq(2)').remove();
+                                $('#feedback-gallery .feedback-content:eq(0)').remove();
                                 // // // // // // // //
-                                $('#j1, #j2').remove();
-                                $('#t0, #t1, #t2').remove();
-                                $('#h1, #h2').remove();
-                                $("#x1, #x2").remove();
-                                $('#h0').text('Target');
+                                $('#message-gallery .header:gt(0)').remove();
+                                $('.tiny').remove();
+                                $('#gallery-left .textbox:gt(1)').remove();
+                                $('#gallery-left .droppable:gt(0)').remove();
+                                $('#gallery-left .header:eq(0)').text('Target');
+                                $('#gallery-left .header:gt(0)').remove();
                                 $('#feedback_header').text('Delivered');
                                 $('#char-info').css('visibility', 'visible');
 
                             }
 
-                            
-                            arrangePics("g",$.parseJSON(data['start_s']));
-                            arrangePics("x",$.parseJSON(data['targets']));
+                            arrangePics("gallery-right",$.parseJSON(data['start_s']));
+                            arrangePics("gallery-left",$.parseJSON(data['targets']));
 
                             if (turn==0) {
                                 
-                                $('.text-input').val('');
-                                $('.text-input').attr('readonly',false);
-                                $('#m0').attr('placeholder', 'Enter your message here...');
-                                $('#m1').attr('placeholder', 'Enter your message here...');
-                                $('#m2').attr('placeholder', 'Enter your message here...');
+                                $('.textbox').val('');
+                                $('.textbox').attr('readonly',false);
+                                $('#message-gallery .textbox').attr('placeholder', 'Enter your message here...');
                                 $("#send_button").prop("disabled", false);
                                 
                                 if (task=='train') {
@@ -577,7 +591,6 @@
                                     $("#banner").text("Send a message to your partner.");
                                 }
 
-                                // setMoveTimer(move_timeout);
 
                             } else if (turn==1) {
 
@@ -589,23 +602,21 @@
                                 if (task=='train') {
 
                                     $("#banner").text("Feedback.");
-                                    $("#feedback-container").css('visibility', 'visible');
-                                    arrangePics("f",$.parseJSON(data['move_2']))
+                                    $("#feedback-gallery").css('visibility', 'visible');
+                                    arrangePics("feedback-gallery",$.parseJSON(data['move_2']))
                                     feedback(data['score'])
                                     addMessages($.parseJSON(data['move_1']));
 
                                 } else if (task=='test') {
 
                                     $("#banner").text("Your Turn: Decide to accept or challenge.");
-                                    $("#feedback-container").css('visibility', 'visible');
-                                    arrangePics("f",$.parseJSON(data['move_2']))
+                                    $("#feedback-gallery").css('visibility', 'visible');
+                                    arrangePics("feedback-gallery",$.parseJSON(data['move_2']))
                                     feedback(data['score'])
                                     addMessages($.parseJSON(data['move_1']));
                                     $("#send_button").prop("disabled", false);
                                     $("#send_button2").css('visibility', 'visible');
                                     $("#send_button").text('Accept');
-
-                                    // setMoveTimer(move_timeout);
 
                                 }
 
@@ -615,20 +626,21 @@
 
                             $('#role').text('Your Role: Selector');
 
-                            setHeaders('h','Slot')
-                            setHeaders('k','Target')
-                            arrangePics("g",$.parseJSON(data['start_r']));
+                            setHeaders('gallery-left','Slot')
+                            setHeaders('feedback-gallery','Target')
+                            arrangePics("gallery-right",$.parseJSON(data['start_r']));
                             getIdsOfImages();
                             
                             if (task=='train') {
                                 initDrag(false);
                             } else {
-                                $('#m1, #m2').remove();
-                                $('#j1, #j2').remove();
-                                $('#h2').remove();
-                                $("#x2").remove();
-                                $('#h0').text('True Target');
-                                $('#h1').text('Tile to Deliver');
+                                $('#message-gallery .textbox:gt(0)').remove();
+                                $('#message-gallery .header:gt(0)').remove();
+                                $('#gallery-left .textbox:eq(0)').text('True Target');
+                                $('#gallery-left .textbox:eq(1)').text('Tile to Deliver');
+                                $('#gallery-left .textbox:eq(2)').remove();
+                                $('#gallery-left .header:eq(2)').remove();
+                                $('#gallery-left .droppable:eq(2)').remove();
                                 initDrag(true);
                             }
 
@@ -636,7 +648,7 @@
 
                                 resetDraggable();
                                 $("#banner").text("Please wait for your partner to move.");
-                                $('.text-input').val('');
+                                $('.textbox').val('');
                                 $(".draggable").draggable("disable");
 
                             } else if (turn==1) {
@@ -669,12 +681,12 @@
                                 if (task=='train') {
 
                                     $("#banner").text("Feedback.");
-                                    $("#feedback-container").css('visibility', 'visible');
+                                    $("#feedback-gallery").css('visibility', 'visible');
                                     var groundTruth = $.parseJSON(data['targets']);
                                     var pics = Object.fromEntries(
                                         Object.entries(groundTruth).filter(([key, value]) => ['0','1','2'].includes(key))
                                         );
-                                    arrangePics("f",pics)
+                                    arrangePics("feedback-gallery",pics)
                                     feedback(data['score'])
 
                                 } else {
@@ -699,7 +711,7 @@
                 
                 function randomMove() {
                     if (turn==0) {
-                        $("#m0").val(' ')
+                        $('#message-gallery .textbox:eq(0)').val(' ')
                     } else if (turn==1) {
                         $('#outputValues').val('{"0":"1","1":"2","2":"3"}')
                     }
@@ -710,9 +722,9 @@
 
                     if (turn==2) {
                         if (id=="send_button") {
-                            $("#m0").val('accept')
+                            $('#message-gallery .textbox:eq(0)').val('accept')
                         } else if (id=="send_button2") {
-                            $("#m0").val('challenge')
+                            $('#message-gallery .textbox:eq(0)').val('challenge')
                         }
                     }
 
@@ -747,15 +759,17 @@
                     }
 
                     if (valid) {
+
                         clearInterval(intervalID);
                         socket.emit('move', {'text': jsonData, 'username': username, 'task': task});
                         $("#send_button").prop("disabled", true);
+
                     }
 
                 }
 
 
-                $('.text-input').on('input', function() {
+                $('.textbox').on('input', function() {
                     socket.emit('typing', {'partner': partner});
                 });
                 
@@ -766,7 +780,7 @@
 
 
                 // Add event listeners to all text areas
-                const textAreas = document.querySelectorAll('.text-input');
+                const textAreas = document.querySelectorAll('.textbox');
                 textAreas.forEach((textarea) => {
                     textarea.addEventListener('input', updateCharacterCount);
                 });
@@ -826,6 +840,7 @@
             <button id="fact-button" style="margin-top: 20px; margin-left: 300px;display: inline-block;">
                 New Fact
             </button>
+
             <div id="fact-display" style="display: inline-block;">
                 Fact content goes here
             </div>
@@ -834,130 +849,113 @@
 
         <div id="game" hidden>
 
-
-        <div class="container">
-            <div class="banner-container">
-                <div>
-                    <span id="role"></span>
-                    <span id="banner"></span>
+            <div class="container">
+                <div class="banner-container">
+                    <div>
+                        <span id="role"></span>
+                        <span id="banner"></span>
+                    </div>
+                    <div id="sub-banner"></div>
                 </div>
-                <div id="sub-banner"></div>
             </div>
-        </div>
 
             <div class="column left" id="feedback-gallery">
 
-                <div id="feedback-container">
-                    <div class="feedback-item">
-                        <h4 id="k0" class="header-text">Guess 1</h4>
-                        <div class="feedback-content">
-                            <div class="feedback-image" id="f0"><img src="" alt=""></div>
-                            <div class="tiny" id="t0">✔</div>
-                        </div>
-                    </div>
-                    <div class="feedback-item">
-                        <h4 id="k1" class="header-text">Guess 2</h4>
-                        <div class="feedback-content">
-                            <div class="feedback-image" id="f1"><img src="" alt=""></div>
-                            <div class="tiny" id="t1">✘</div>
-                        </div>
-                    </div>
-                    <div class="feedback-item">
-                        <h4 id="k2" class="header-text">Guess 3</h4>
-                        <div class="feedback-content">
-                            <div class="feedback-image" id="f2"><img src="" alt=""></div>
-                            <div class="tiny" id="t2">✔</div>
-                        </div>
-                    </div>
+                <h4 class="header">Guess 1</h4>
+                <div class="feedback-content">
+                    <img src="" alt="">
+                    <div class="tiny">✔</div>
                 </div>
-                
-                
+
+                <h4 class="header">Guess 2</h4>
+                <div class="feedback-content">
+                    <img src="" alt="">
+                    <div class="tiny">✘</div>
+                </div>
+
+                <h4 class="header">Guess 3</h4>
+                <div class="feedback-content">
+                    <img src="" alt="">
+                    <div class="tiny">✔</div>
+                </div>
+                            
             </div>
 
-            <div class="column middle" id="message-gallery">
+                <div class="column middle" id="message-gallery" style="text-align:center;">
 
-                <div style="text-align:center;">
-                    <h4 id="j0" class="header-text">Description 1</h4>
-                    <textarea id="m0" class="text-input" style="margin-bottom: 56px;"></textarea><br>
+                    <h4 class="header">Description 1</h4>
+                    <textarea class="textbox" style="margin-bottom: 56px;"></textarea><br>
 
-                    <h4 id="j1" class="header-text">Description 2</h4>
-                    <textarea id="m1" class="text-input" style="margin-bottom: 56px;"></textarea><br>
+                    <h4 class="header">Description 2</h4>
+                    <textarea class="textbox" style="margin-bottom: 56px;"></textarea><br>
 
-                    <h4 id="j2" class="header-text">Description 3</h4>
-                    <textarea id="m2" class="text-input"></textarea><br>
+                    <h4 class="header">Description 3</h4>
+                    <textarea class="textbox"></textarea><br>
                     
                     <p id="char-info" class="info" style="margin-top: 30px;">Total characters: <span id="charCount">0</span></p>
+
                 </div>
 
-            </div>
+                <div id="image-gallery">
 
-            <div id="image-gallery">
-
-                <div id="sortable-left">
-                    <div>
-                        <h4 id="h0" class="header-text">Target 1</h4>
-                        <div id="x0" class="droppable">
+                    <div id="gallery-left">
+                        <h4 class="header">Target 1</h4>
+                        <div class="droppable">
                             <p class="drop-text">Drag tile here</p><img src="" alt="">
                         </div>
-                    </div>
-                    <div>
-                        <h4 id="h1" class="header-text">Target 2</h4>
-                        <div id="x1" class="droppable">
+
+                        <h4 class="header">Target 2</h4>
+                        <div class="droppable">
                             <p class="drop-text">Drag tile here</p><img src="" alt="">
                         </div>
-                    </div>
-                    <div>
-                        <h4 id="h2" class="header-text">Target 3</h4>
-                        <div id="x2" class="droppable">
+
+                        <h4 class="header">Target 3</h4>
+                        <div class="droppable">
                             <p class="drop-text">Drag tile here</p><img src="" alt="">
+                        </div>
+
+                        <div id="outputDiv" hidden>
+                            <input id="outputValues" type="text" value="">
                         </div>
                     </div>
 
-                    <div id="outputDiv" hidden>
-                    <!-- <div id="outputDiv"> -->
-                        <input id="outputValues" type="text" value="">
-                    </div>
-                </div>
+                    <div style="text-align:center; margin-left: 60px;">
 
-                <div style="text-align:center; margin-left: 60px;">
+                        <h4 class="header">Gallery</h4>
+                        
+                        <div id="gallery-right">
+                            <div id="g0" class="draggable"><img src="" alt=""></div>
+                            <div id="g1" class="draggable"><img src="" alt=""></div>
+                            <div id="g2" class="draggable"><img src="" alt=""></div>
+                            <div id="g3" class="draggable"><img src="" alt=""></div>
+                            <div id="g4" class="draggable"><img src="" alt=""></div>
+                            <div id="g5" class="draggable"><img src="" alt=""></div>
+                            <div id="g6" class="draggable"><img src="" alt=""></div>
+                            <div id="g7" class="draggable"><img src="" alt=""></div>
+                            <div id="g8" class="draggable"><img src="" alt=""></div>
+                            <div id="g9" class="draggable"><img src="" alt=""></div>
+                            <div id="g10" class="draggable"><img src="" alt=""></div>
+                            <div id="g11" class="draggable"><img src="" alt=""></div>
+                        </div>
 
-                    <h4 class="header-text">Gallery</h4>
-                    
-                
-                    <div id="sortable-right">
-                        <div id="g0" class="draggable"><img src="" alt=""></div>
-                        <div id="g1" class="draggable"><img src="" alt=""></div>
-                        <div id="g2" class="draggable"><img src="" alt=""></div>
-                        <div id="g3" class="draggable"><img src="" alt=""></div>
-                        <div id="g4" class="draggable"><img src="" alt=""></div>
-                        <div id="g5" class="draggable"><img src="" alt=""></div>
-                        <div id="g6" class="draggable"><img src="" alt=""></div>
-                        <div id="g7" class="draggable"><img src="" alt=""></div>
-                        <div id="g8" class="draggable"><img src="" alt=""></div>
-                        <div id="g9" class="draggable"><img src="" alt=""></div>
-                        <div id="g10" class="draggable"><img src="" alt=""></div>
-                        <div id="g11" class="draggable"><img src="" alt=""></div>
+                        <button id="reset_button" style="display: block; margin: 5px auto;">Reset Tiles</button>
+
                     </div>
 
-                    <button id="reset_button" style="display: block; margin: 5px auto;">Reset Tiles</button>
-
                 </div>
 
-            </div>
 
+                <div class="container">
+                    <div class="info-container" style="padding:5px;">
+                        <p id="timer" class="info">Time to Move: <span id="time-count"></span></p>
+                        <p class="info">Rounds Remaining: <span id="n-remaining"></span></p>
+                    </div>
 
-            <div class="container">
-                <div class="info-container" style="padding:5px;">
-                    <p id="timer" class="info">Time to Move: <span id="time-count"></span></p>
-                    <p class="info">Rounds Remaining: <span id="n-remaining"></span></p>
+                    <div id="button-container">
+                        <button id="send_button" class="button">Submit!</button>
+                        <button id="send_button2" class="button" style="margin-left: 50px;">Challenge</button>
+                    </div>
                 </div>
-
-                <div id="button-container">
-                    <button id="send_button" class="button">Submit!</button>
-                    <button id="send_button2" class="button" style="margin-left: 50px;">Challenge</button>
-                </div>
-            </div>
-
 
         </div>
 
