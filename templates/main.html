@@ -103,7 +103,6 @@
 
         #image-gallery {
             display: flex;
-/*            border: 1px solid red;*/
         }
 
         .feedback-content {
@@ -111,10 +110,6 @@
             align-items: center; 
             margin-bottom: 15px;
         }
-
-/*        .feedback-image {
-            margin-right: 5px;
-        }*/
 
         .tiny {
             font-size: 20px;  /* Adjust the size of the tiny element */
@@ -213,8 +208,6 @@
 
     </style>
 
-    <script type="text/javascript" src="https://unpkg.com/htmx.org@2.0.2"></script>
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@jaames/iro@5"></script>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.0/jquery-ui.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
@@ -235,6 +228,7 @@
 
                 var intervalID;
                 var move_timeout = 60;
+                var characters_avail = 10;
 
                 const randomItem = arr => arr.splice((Math.random() * arr.length) | 0, 1);
 
@@ -245,7 +239,6 @@
                 });
 
                 var paused = false;
-                // var timer = 10;
 
                 function initDrag(clone) {
 
@@ -433,7 +426,7 @@
                     });
 
                     // Update the character count display
-                    document.getElementById('charCount').textContent = totalChars;
+                    document.getElementById('charCount').textContent = characters_avail - totalChars;
                 }
 
 
@@ -489,10 +482,10 @@
                 });
 
 
-                socket.on('done', function() {
+                socket.on('done', function(data) {
                     console.log("finishing for " + username);
                     const message = JSON.stringify({
-                        type: "complete"
+                        type: data['type']
                     });
                     window.parent.postMessage(message,"*");
                 });
@@ -546,7 +539,7 @@
 
                             if (task=='test') {
                                 $('#message-gallery .textbox:gt(0)').remove();
-                                $('#message-gallery .textbox:eq(0)').attr('maxlength', '20');
+                                $('#message-gallery .textbox:eq(0)').attr('maxlength', String(characters_avail));
                                 // show the middle feedback, i.e. the delivered tile
                                 $('#feedback-gallery .header:gt(0)').remove();
                                 $('#feedback-gallery .header:eq(0)').text('Delivered')
@@ -575,14 +568,17 @@
                                 
                                 if (task=='train') {
                                     $("#banner").text("Your Turn: Describe the target tiles.");
+                                    $('#banner').css('color', 'red');
                                 } else {
-                                    $("#banner").text("Send a message to your partner.");
+                                    $("#banner").text("Your Turn: Send a message to your partner.");
+                                    $('#banner').css('color', 'red');
                                 }
 
 
                             } else if (turn==1) {
 
                                 $("#banner").text("Please wait for your partner to move.");
+                                $('#banner').css('color', 'black');
 
                             } else if (turn==2) {
 
@@ -590,6 +586,7 @@
                                 if (task=='train') {
 
                                     $("#banner").text("Feedback.");
+                                    $('#banner').css('color', 'black');
                                     $("#feedback-gallery").css('visibility', 'visible');
                                     arrangePics("feedback-gallery",$.parseJSON(data['move_2']))
                                     feedback(data['score'])
@@ -598,6 +595,7 @@
                                 } else if (task=='test') {
 
                                     $("#banner").text("Your Turn: Decide to accept or challenge.");
+                                    $('#banner').css('color', 'red');
                                     $("#feedback-gallery").css('visibility', 'visible');
                                     // hack! switch the picture indeces because we have deleted the other two feedback frames
                                     myVar = {0:$.parseJSON(data['move_2'])[1]}
@@ -639,16 +637,22 @@
                             if (turn==0) {
 
                                 resetDraggable();
+                                // need to re-arrange pictures & get IDs *after* resetting draggable
+                                arrangePics("gallery-right",$.parseJSON(data['start_r']));
+                                getIdsOfImages();
                                 $("#banner").text("Please wait for your partner to move.");
+                                $('#banner').css('color', 'black');
                                 $('.textbox').val('');
                                 $(".draggable").draggable("disable");
 
                             } else if (turn==1) {
 
                                 if (task=='train') {
-                                    $("#banner").text("Your Turn: Guess the target sequence.");
+                                    $("#banner").text("Your Turn: Drag tiles from the gallery to guess the target sequence.");
+                                    $('#banner').css('color', 'red');
                                 } else {
                                     $("#banner").text("Your Turn: Select both tiles.");
+                                    $('#banner').css('color', 'red');
                                 }
 
                                 resetDraggable();
@@ -673,6 +677,7 @@
                                 if (task=='train') {
 
                                     $("#banner").text("Feedback.");
+                                    $('#banner').css('color', 'black');
                                     $("#feedback-gallery").css('visibility', 'visible');
                                     var groundTruth = $.parseJSON(data['targets']);
                                     var pics = Object.fromEntries(
@@ -684,6 +689,7 @@
                                 } else {
 
                                     $("#banner").text("Please wait for your partner to move.");
+                                    $('#banner').css('color', 'black');
 
                                 }
 
@@ -827,15 +833,28 @@
             
             <h1 style="text-align:center;">Welcome!</h1>
 
-            <p style="text-align:center;">Please wait while we match you to a fellow participant. If this process takes more than 5 minutes, you will skip the task. Enjoy some trivia while you wait.</p>
+            <p style="text-align:center;font-size: 16pt; width: 650px; margin: 0 auto;">
+                Please wait patiently while we match you to your partner. This may take a few minutes. Please do NOT minimize this window or navigate to another page. Enjoy the "fun facts" below while you wait. 
+            </p>
 
-            <button id="fact-button" style="margin-top: 20px; margin-left: 300px;display: inline-block;">
-                New Fact
-            </button>
+            <img src="/static/loader.gif" alt="Loading..." style="width: 300px; height: auto;display: block; margin: 0 auto;">
 
-            <div id="fact-display" style="display: inline-block;">
-                Fact content goes here
-            </div>
+            <center>
+
+                <div id="fact-display" style="display:inline-block;font-size:16pt; margin-top: 30px;">
+                    Fact content goes here
+                </div>
+                
+                <br>
+
+                <button id="fact-button" style="margin-top: 20px; margin-top: 30px;display: inline-block;font-size: 16px; padding: 7px 15px;">
+                    New Fun Fact
+                </button>
+
+            </center>
+            
+
+            
 
         </div>
 
@@ -884,7 +903,7 @@
                     <h4 class="header">Description 3</h4>
                     <textarea class="textbox"></textarea><br>
                     
-                    <p id="char-info" class="info" style="margin-top: 30px;">Total characters: <span id="charCount">0</span></p>
+                    <p id="char-info" class="info" style="margin-top: 30px;">Characters Remaining: <span id="charCount">0</span></p>
 
                 </div>
 

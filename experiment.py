@@ -21,8 +21,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 
 n_rounds = {'train':15, 'test':10}
-# n_rounds = {'train':3, 'test':3}
-s_pair_timeout = 300
+timeout_train = 10
+# timeout_train = 240
+timeout_test = 10
+# timeout_test = 300
 
 
 ##################################################################
@@ -191,7 +193,7 @@ def process_user(username, task, assignment):
                 emit('refresh', to=user.user)
             else:
                 app.logger.info(f'Issuing done for user: {user.user} and partner: {user.partner}')
-                emit('done', to=user.user)
+                emit('done', {'type':'complete'}, to=user.user)
         else:
             user.status = 'waiting'
     db.session.commit()
@@ -246,11 +248,11 @@ def process_waiting():
 
             for user in users:
                 if user.time:
-                    if time.time() - user.time > s_pair_timeout:
+                    if time.time() - user.time > timeout_train:
                         user.status = 'waiting'
                         user.time = None
                         app.logger.info(f'timeout for user: {user.user}, task: {user.task}, assignment: {user.assignment}')
-                        socketio.emit('done', to=user.user)
+                        socketio.emit('done', {'type':'timeout'}, to=user.user)
                         db.session.commit()
                         time.sleep(.1)
         time.sleep(2)
@@ -380,8 +382,8 @@ def move(data):
             db.session.commit()
 
             app.logger.info(f'Issuing done for user: {user.user} and partner: {user.partner}')
-            emit('done', to=user.user)
-            emit('done', to=user.partner)
+            emit('done', {'type':'complete'}, to=user.user)
+            emit('done', {'type':'complete'}, to=user.partner)
             return
 
         # refresh
