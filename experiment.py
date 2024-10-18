@@ -22,8 +22,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 n_rounds = {'train':15, 'test':10}
 timeout_train = 10
-# timeout_train = 240
 timeout_test = 10
+
+# timeout_train = 240
 # timeout_test = 300
 
 
@@ -133,6 +134,7 @@ def create_game(pair_num, task, n):
 
 
 ##################### NEED TO UPDATE FOR WHEN TASK IS TEST: USERS KEEP ROLES
+
 
 def create_pair(user_1,user_2,task):
     pair_users = [user_1,user_2]
@@ -249,7 +251,7 @@ def process_waiting():
             for user in users:
                 if user.time:
                     if time.time() - user.time > timeout_train:
-                        user.status = 'waiting'
+                        user.status = 'timeout'
                         user.time = None
                         app.logger.info(f'timeout for user: {user.user}, task: {user.task}, assignment: {user.assignment}')
                         socketio.emit('done', {'type':'timeout'}, to=user.user)
