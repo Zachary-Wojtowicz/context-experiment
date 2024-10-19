@@ -194,6 +194,7 @@ def process_user(username, task, assignment):
                 app.logger.info(f'Issuing (done) for user: {user.user} and partner: {user.partner}')
                 user.status = 'waiting'
                 user.time == None
+                flag_modified(user, "time") 
                 emit('done', {'type':'complete'}, to=user.user)
         else:
             user.status = 'waiting'
@@ -377,13 +378,10 @@ def move(data):
             create_game(user.pair, 'test', game.n + 1)
         else:
             partner = db.session.query(User).filter(User.user==user.partner).first()
-            # for i in [user, partner]:
-            #     i.status = 'waiting'
-            #     i.time == None
-            user.status = 'waiting'
-            user.time == None
-            partner.status = 'waiting'
-            partner.time == None
+            for i in [user, partner]:
+                i.status = 'waiting'
+                i.time == None
+                flag_modified(i, "time") 
             db.session.commit()
 
             app.logger.info(f'Issuing done for user: {user.user} and partner: {user.partner}')
