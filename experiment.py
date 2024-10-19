@@ -20,7 +20,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 ##################################################################
 
 
-n_rounds = {'train':15, 'test':10}
+# n_rounds = {'train':15, 'test':10}
+n_rounds = {'train':2, 'test':2}
 timeout = 240
 
 
