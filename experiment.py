@@ -190,7 +190,7 @@ def process_user(username, task, assignment):
                 user.status=='playing'
                 emit('refresh', to=user.user)
             else:
-                app.logger.info(f'Issuing done for user: {user.user} and partner: {user.partner}')
+                app.logger.info(f'Issuing (done) for user: {user.user} and partner: {user.partner}')
                 user.status = 'waiting'
                 user.time == None
                 emit('done', {'type':'complete'}, to=user.user)
