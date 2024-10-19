@@ -193,7 +193,7 @@ def process_user(username, task, assignment):
                 emit('refresh', to=user.user)
             else:
                 app.logger.info(f'Issuing (done) for user: {user.user} and partner: {user.partner}')
-                user.status = 'waiting'
+                user.status = 'done'
                 user.time = None
                 emit('done', {'type':'complete'}, to=user.user)
         else:
@@ -379,7 +379,7 @@ def move(data):
         else:
             partner = db.session.query(User).filter(User.user==user.partner).first()
             for i in [user, partner]:
-                i.status = 'waiting'
+                i.status = 'done'
                 i.time = None
             db.session.commit()
 
