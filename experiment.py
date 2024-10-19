@@ -9,6 +9,7 @@ from flask import Flask, request, session, g, redirect, url_for, abort, render_t
 from markupsafe import escape
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import Integer, String, func
 from flask_socketio import SocketIO, send, emit, join_room
 from dataclasses import dataclass
