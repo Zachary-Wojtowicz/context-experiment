@@ -161,10 +161,6 @@
             height: 100px;
         }
 
-        .header {
-            
-        }
-
         .drop-text {
             position: absolute;
             top: 40%;
@@ -218,24 +214,24 @@
 
             $.getJSON('/static/trivia.json',function main(data) {
 
-                var facts = data['facts'];
-
                 var url = new URL(window.location.href);
                 console.log('url: ' + url);
                 var username = url.searchParams.get("username");
                 var task = url.searchParams.get("task");
                 var assignment = url.searchParams.get("assignment");
+                var facts = data['facts'];
 
                 var intervalID;
-                var move_timeout = 60;
+                var move_timeout = 90;
                 var characters_avail = 10;
+                var n_targets_train = 2;
 
                 const randomItem = arr => arr.splice((Math.random() * arr.length) | 0, 1);
 
-                $('#fact-display').html("Fun Fact: " +randomItem(facts));
+                $('#fact-display').html("Fun Fact: " + randomItem(facts));
 
                 $('#fact-button').click(function() {
-                    $('#fact-display').html("Fun Fact: " +randomItem(facts));
+                    $('#fact-display').html("Fun Fact: " + randomItem(facts));
                 });
 
                 var paused = false;
@@ -338,13 +334,26 @@
                 }
 
 
+                // function getMessages() {
+                //     messageData = {
+                //         "0": $('#message-gallery .textbox:eq(0)').val(),
+                //         "1": $('#message-gallery .textbox:eq(1)').val(),
+                //         "2": $('#message-gallery .textbox:eq(2)').val()
+                //     };
+                //     return JSON.stringify(messageData);
+                // }
+
+
                 function getMessages() {
-                    messageData = {
-                        "0": $('#message-gallery .textbox:eq(0)').val(),
-                        "1": $('#message-gallery .textbox:eq(1)').val(),
-                        "2": $('#message-gallery .textbox:eq(2)').val()
-                    };
-                    return JSON.stringify(messageData);
+                    var messageData = {};
+
+                    // Loop through all .textbox elements inside #message-gallery
+                    $('#message-gallery .textbox').each(function(index) {
+                        // Add the value of each textbox to the messageData object, with index as the key
+                        messageData[index] = $(this).val();
+                    });
+
+                    return JSON.stringify(messageData);  // Return the JSON string of the object
                 }
 
 
@@ -505,7 +514,8 @@
 
                 socket.on('update', (data) => {
 
-                    console.log('getting an update: ' + JSON.stringify(data))
+                    console.log('getting an update: ' + JSON.stringify(data));
+                    clearInterval(intervalID);
 
                     if (data.hasOwnProperty('pair'))  { 
 
@@ -529,6 +539,13 @@
                         $('#timer').css('visibility', 'hidden');
                         updateCharacterCount();
                         $('#char-info').css('visibility', 'hidden');
+
+                        $('#message-gallery .textbox:gt('+(n_targets_train-1).toString()+')').remove();
+                        $('#message-gallery .header:gt('+(n_targets_train-1).toString()+')').remove();
+                        $('#gallery-left .header:gt('+(n_targets_train-1).toString()+')').remove();
+                        $('#gallery-left .droppable:gt('+(n_targets_train-1).toString()+')').remove();
+                        $('#feedback-gallery .header:gt('+(n_targets_train-1).toString()+')').remove();
+                        $('#feedback-gallery .feedback-content:gt('+(n_targets_train-1).toString()+')').remove();
 
                         if (role=='sender') {
 
@@ -579,6 +596,8 @@
 
                                 $("#banner").text("Please wait for your partner to move.");
                                 $('#banner').css('color', 'black');
+
+                                setMoveTimer();
 
                             } else if (turn==2) {
 
@@ -645,6 +664,8 @@
                                 $('.textbox').val('');
                                 $(".draggable").draggable("disable");
 
+                                setMoveTimer();
+
                             } else if (turn==1) {
 
                                 if (task=='train') {
@@ -666,8 +687,6 @@
                                 });
 
                                 $("#send_button").prop("disabled", false);
-
-                                // setMoveTimer(move_timeout);
 
                             } else if (turn==2) {   
 
@@ -746,9 +765,9 @@
 
                         nTiles = Object.keys($.parseJSON(jsonData)).length
 
-                        if (task=='train' && nTiles<3) {
+                        if (task=='train' && nTiles<n_targets_train) {
                             valid = false;
-                            $("#sub-banner").text("Select 3 tiles to complete the puzzle.");
+                            $("#sub-banner").text("Select "+n_targets_train.toString()+" tiles to complete the puzzle.");
                         } else if (task=='test' && nTiles<2) {
                             valid = false;
                             $("#sub-banner").text("Select 2 tiles to complete the puzzle.");
@@ -784,9 +803,11 @@
                 });
 
 
-                function setMoveTimer(timer) {
+                function setMoveTimer() {
 
-                    $('#timer').css('visibility', 'visible');
+                    // $('#timer').css('visibility', 'visible');
+
+                    var timer = move_timeout;
 
                     intervalID = setInterval(function () {
 
@@ -802,10 +823,13 @@
 
                                 } else {
 
-                                    randomMove();
-                                    submitMove(send_button);
+                                    // randomMove();
+                                    // submitMove(send_button);
+                                    // clearInterval(intervalID);
+                                    // $('#timer').css('visibility', 'hidden');
+
+                                    socket.emit('partner_timeout', {'username': username, 'partner': partner});
                                     clearInterval(intervalID);
-                                    $('#timer').css('visibility', 'hidden');
 
                                 }
 
@@ -847,7 +871,7 @@
                 
                 <br>
 
-                <button id="fact-button" style="margin-top: 20px; margin-top: 30px;display: inline-block;font-size: 16px; padding: 7px 15px;">
+                <button id="fact-button" style="margin-top: 30px;display: inline-block;font-size: 16px; padding: 7px 15px;">
                     New Fun Fact
                 </button>
 
@@ -949,7 +973,7 @@
                             <div id="g11" class="draggable"><img src="" alt=""></div>
                         </div>
 
-                        <button id="reset_button" style="display: block; margin: 5px auto;">Reset Tiles</button>
+                        <button id="reset_button" style="display: block; margin: 5px auto; font-size: 16px; padding: 7px 15px;">Reset Tiles</button>
 
                     </div>
 

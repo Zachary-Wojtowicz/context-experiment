@@ -21,9 +21,14 @@ from apscheduler.schedulers.background import BackgroundScheduler
 ##################################################################
 
 
-# n_rounds = {'train':15, 'test':10}
-n_rounds = {'train':2, 'test':2}
+n_rounds = {'train':12, 'test':9}
 timeout = 240
+n_targets_train = 2
+n_tiles_train = 6
+
+# hard code targets: 6 previously-seen and 3 new
+# test_sequence = [0,1,2,3,4,5,6,9,10,11]
+test_sequence = list(range(n_rounds['test']))
 
 
 ##################################################################
@@ -68,8 +73,10 @@ class User(db.Model):
     i: Mapped[int] = mapped_column(primary_key=True)
     user: Mapped[str] = mapped_column(unique=True)
     status: Mapped[str]
-    pair: Mapped[int] = mapped_column(nullable=True)
     role: Mapped[str] = mapped_column(nullable=True)
+    pair: Mapped[int] = mapped_column(nullable=True)
+    pair_train: Mapped[int] = mapped_column(nullable=True)
+    pair_test: Mapped[int] = mapped_column(nullable=True)
     partner: Mapped[str] = mapped_column(nullable=True)
     partner_train: Mapped[str] = mapped_column(nullable=True)
     partner_test: Mapped[str] = mapped_column(nullable=True)
@@ -91,6 +98,7 @@ class Game(db.Model):
     move_1: Mapped[str] = mapped_column(nullable=True)
     move_2: Mapped[str] = mapped_column(nullable=True)
     move_3: Mapped[str] = mapped_column(nullable=True)
+    times: Mapped[str]
 
 
 if not os.path.isfile('./instance/project.db'):
@@ -109,13 +117,10 @@ def create_game(pair_num, task, n):
     if task == 'train':
         start_s = random_images(9,9)
         start_r = random_images(9,9)
-        targets = random_images(3,9)
+        targets = random_images(n_targets_train,n_tiles_train)
     elif task == 'test':
         start_s = random_images(12,12)
         start_r = random_images(12,12)
-        # targets = random_images(1,12)
-        # hard code targets: 7 previously-seen and 3 new
-        test_sequence = [0,1,2,3,4,5,6,9,10,11]
         targets = json.dumps({'0':str(test_sequence[n])})
     game = Game(
         pair = pair_num,
@@ -124,7 +129,8 @@ def create_game(pair_num, task, n):
         turn = 0,
         start_s = start_s,
         start_r = start_r,
-        targets = targets
+        targets = targets,
+        times = json.dumps({'s':time.time()})
     )
     db.session.add(game)
     db.session.commit()
@@ -134,9 +140,10 @@ def create_game(pair_num, task, n):
 ##################### NEED TO UPDATE FOR WHEN TASK IS TEST: USERS KEEP ROLES
 
 
-def create_pair(user_1,user_2,task):
+def create_pair(user_1,user_2,task,new=True):
     pair_users = [user_1,user_2]
-    random.shuffle(pair_users)
+    if new:
+        random.shuffle(pair_users)
     pair_num = db.session.query(func.max(User.pair)).scalar()
     if pair_num:
         pair_num += 1
@@ -144,19 +151,22 @@ def create_pair(user_1,user_2,task):
         pair_num = 1
     for i in [0, 1]:
         user = pair_users[i]
-        user.pair = pair_num
-        if i == 0:
-            user.role = 'sender'
-            user.partner = pair_users[i+1].user
-        else:
-            user.role = 'receiver'
-            user.partner = pair_users[i-1].user
+        if new:
+            if i == 0:
+                user.role = 'sender'
+                user.partner = pair_users[i+1].user
+            else:
+                user.role = 'receiver'
+                user.partner = pair_users[i-1].user
         user.status = 'playing'
         app.logger.info('paired user: ' + user.user)
+        user.pair = pair_num
         if task=='train':
             user.partner_train = user.partner
+            user.pair_train = pair_num
         elif task=='test':
             user.partner_test = user.partner
+            user.pair_test = pair_num
     db.session.commit()
     time.sleep(.25)
     create_game(pair_num, task, 0)
@@ -224,7 +234,7 @@ def process_waiting():
                 partner_name = user_0.partner_train
                 if partner_name in user_dict and partner_name not in paired_users:
                     user_1 = user_dict[partner_name] 
-                    create_pair(user_0, user_1, 'test')
+                    create_pair(user_0, user_1, 'test',new=False)
                     paired_users.add(user_0.user)
                     paired_users.add(user_1.user)
 
@@ -253,11 +263,11 @@ def process_waiting():
                     if time.time() - user.time > timeout:
                         user.status = 'timeout'
                         user.time = None
-                        app.logger.info(f'timeout for user: {user.user}, task: {user.task}, assignment: {user.assignment}')
+                        app.logger.info(f'Timeout for user: {user.user}, task: {user.task}, assignment: {user.assignment}')
                         socketio.emit('done', {'type':'timeout'}, to=user.user)
                         db.session.commit()
                         time.sleep(.1)
-        time.sleep(2)
+        time.sleep(1)
 
 
 def random_images(n,m): 
@@ -322,6 +332,20 @@ def handle_typing(data):
     emit('notify_typing', to=partner)
 
 
+@socketio.on('partner_timeout')
+def partner_timeout(data):
+    user = data['username']
+    user = db.session.query(User).filter(User.user==data['username']).first()
+    user.status = 'timeout'
+    user.time = None
+    app.logger.info(f'Partner timeout for user: {user.user}, task: {user.task}, assignment: {user.assignment}, partner: {user.partner}')
+    socketio.emit('done', {'type':'timeout'}, to=user.user)
+    socketio.emit('done', {'type':'timeout'}, to=user.partner)
+    db.session.commit()
+
+    # emit('notify_typing', to=partner)
+
+
 @socketio.on('update')
 def update(data):
     user = db.session.query(User).filter(User.user==data['username']).first()
@@ -348,6 +372,10 @@ def update(data):
 def move(data):
     user = db.session.query(User).filter(User.user==data['username']).first()
     game = db.session.query(Game).filter(Game.pair==user.pair,Game.task==user.task).order_by(Game.i.desc()).first()
+
+    times_record = json.loads(game.times)
+    times_record[game.turn] = time.time() - times_record['s']
+    game.times = json.dumps(times_record)
     
     if game.turn==0:
         game.move_1 = str(data['text'])
@@ -367,7 +395,7 @@ def move(data):
     if (game.turn==2 and game.task=='train') or (game.turn==3):
         if game.task=='train':
             if sum(score_game(game.targets,game.move_2).values()) == 3:
-                time.sleep(3)
+                time.sleep(2.5)
             else:
                 time.sleep(7)
         
