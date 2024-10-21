@@ -137,9 +137,6 @@ def create_game(pair_num, task, n):
     return
 
 
-##################### NEED TO UPDATE FOR WHEN TASK IS TEST: USERS KEEP ROLES
-
-
 def create_pair(user_1,user_2,task,new=True):
     pair_users = [user_1,user_2]
     if new:
