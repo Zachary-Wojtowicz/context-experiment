@@ -10,7 +10,6 @@ $(document).ready(function() {
         timerInterval = null;
 
         var intervalID;
-        // var move_timeout = 30;
         var wait_timeout = 10;
         var characters_avail = 10;
         var n_targets_train = 1;
@@ -534,6 +533,8 @@ $(document).ready(function() {
                     $('#feedback-gallery .feedback-content:gt('+(n_targets_train-1).toString()+')').remove();
                 }
 
+                clearInterval(timerInterval);
+
 
                 if (role=='sender') {
 
@@ -636,8 +637,6 @@ $(document).ready(function() {
 
                         }
 
-                        clearInterval(timerInterval);
-
                     }
 
                 } else if (role=='receiver') {
@@ -682,7 +681,7 @@ $(document).ready(function() {
                     } else if (turn==1) {
 
                         if (task=='train') {
-                            $("#banner").text("Your Turn: Drag tiles from the gallery to guess the target sequence.");
+                            $("#banner").text("Your Turn: Drag tiles from the gallery to guess the target.");
                             $('#banner').css('color', 'red');
                         } else {
                             $("#banner").text("Your Turn: Select both tiles.");
@@ -726,8 +725,6 @@ $(document).ready(function() {
                             $('#banner').css('color', 'black');
 
                         }
-
-                        clearInterval(timerInterval);
 
                     }
                 }
