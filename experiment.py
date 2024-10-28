@@ -21,13 +21,16 @@ from apscheduler.schedulers.background import BackgroundScheduler
 ##################################################################
 
 
-n_rounds = {'train':12, 'test':9}
+n_rounds = {'train':12, 'test':7}
 timeout = 240
-n_targets_train = 2
-n_tiles_train = 6
+n_targets_train = 1
+n_tiles_train = 4
 
-# hard code targets: 6 previously-seen and 3 new
-# test_sequence = [0,1,2,3,4,5,6,9,10,11]
+
+# hard code train tiles: 6 previously-seen and 3 new
+train_sequence = [0,1,2,3,2,1,3,0,2,3,0,1]
+
+# hard code train tiles: 6 previously-seen and 3 new
 test_sequence = list(range(n_rounds['test']))
 
 
@@ -51,8 +54,6 @@ else:
 if __name__ == '__main__':
     # socketio.run(app, debug=True)
     socketio.run(app, host="0.0.0.0", port=5000)
-
-logging.basicConfig(level=logging.INFO)
 
 
 ##################################################################
@@ -81,6 +82,7 @@ class User(db.Model):
     partner_train: Mapped[str] = mapped_column(nullable=True)
     partner_test: Mapped[str] = mapped_column(nullable=True)
     task: Mapped[int]
+    strikes: Mapped[int]
     assignment: Mapped[str]
     time: Mapped[float] = mapped_column(nullable=True)
 
@@ -117,10 +119,13 @@ def create_game(pair_num, task, n):
     if task == 'train':
         start_s = random_images(9,9)
         start_r = random_images(9,9)
-        targets = random_images(n_targets_train,n_tiles_train)
+        # targets = random_images(n_targets_train,n_tiles_train)
+        targets = json.dumps({'0':str(train_sequence[n])})
     elif task == 'test':
-        start_s = random_images(12,12)
-        start_r = random_images(12,12)
+        # start_s = random_images(12,12)
+        # start_r = random_images(12,12)
+        start_s = random_images(9,9)
+        start_r = random_images(9,9)
         targets = json.dumps({'0':str(test_sequence[n])})
     game = Game(
         pair = pair_num,
@@ -185,6 +190,7 @@ def process_user(username, task, assignment):
             partner_train = None,
             partner_test = None,
             task = task,
+            strikes = 0,
             assignment = assignment,
             time = time.time()
         )
@@ -220,7 +226,6 @@ def process_waiting():
                     for i in range(0, len(user_list) - 1, 2):
                         create_pair(user_list[i], user_list[i + 1], 'train')
 
-
             # pair test users for the "same" assignment type 
             user_list = [user for user in users if user.task=='test' and user.assignment=='same']
             paired_users = set()
@@ -234,7 +239,6 @@ def process_waiting():
                     create_pair(user_0, user_1, 'test',new=False)
                     paired_users.add(user_0.user)
                     paired_users.add(user_1.user)
-
 
             # pair test users for the "different" assignment type
             user_list = [user for user in users if user.task=='test' and user.assignment=='different']
@@ -253,7 +257,6 @@ def process_waiting():
                     create_pair(user_0, user_1, 'test')
                     paired_users.add(user_0.user)
                     paired_users.add(user_1.user)
-
 
             for user in users:
                 if user.time:
@@ -321,17 +324,17 @@ def handle_connected(data):
     app.logger.info(f'socket connected for user: {data['username']}, task: {data['task']}, assignment: {data['assignment']}')
     join_room(data['username'])
     process_user(data['username'], data['task'], data['assignment'])
+    socketio.emit('refresh', room=data['username'])
 
 
-@socketio.on('typing')
-def handle_typing(data):
-    partner = data['partner']
-    emit('notify_typing', to=partner)
+# @socketio.on('typing')
+# def handle_typing(data):
+#     partner = data['partner']
+#     emit('notify_typing', to=partner)
 
 
 @socketio.on('partner_timeout')
 def partner_timeout(data):
-    user = data['username']
     user = db.session.query(User).filter(User.user==data['username']).first()
     user.status = 'timeout'
     user.time = None
@@ -339,8 +342,6 @@ def partner_timeout(data):
     socketio.emit('done', {'type':'timeout'}, to=user.user)
     socketio.emit('done', {'type':'timeout'}, to=user.partner)
     db.session.commit()
-
-    # emit('notify_typing', to=partner)
 
 
 @socketio.on('update')
@@ -351,18 +352,39 @@ def update(data):
     else:
         game = db.session.query(Game).filter(Game.pair==user.pair,Game.task==user.task).order_by(Game.i.desc()).first()
         if game is not None:
-            app.logger.info(f'retrieved game: {game.i}, pair: {game.pair}, task: {game.task}, user: {user.user}')
+            app.logger.info(f'retrieved game: {game.n}, pair: {game.pair}, task: {game.task}, user: {user.user}')
             if game.task=='train':
                 n_remaining = n_rounds['train'] - game.n
             elif game.task=='test':
                 n_remaining = n_rounds['test'] - game.n
-            data = {'pair':game.pair, 'task':game.task, 'n':game.n, 'turn':game.turn, 'start_s':game.start_s, 'start_r':game.start_r, 'targets':game.targets, 'role':user.role, 'partner':user.partner,  'n_remaining':n_remaining}
+            data = {'pair':game.pair, 'task':game.task, 'n':game.n, 'turn':game.turn, 'start_s':game.start_s, 'start_r':game.start_r, 'targets':game.targets, 'role':user.role, 'strikes':user.strikes, 'partner':user.partner,  'n_remaining':n_remaining}
             if game.turn>=1:
                 data['move_1'] = game.move_1
             if game.turn>=2:
                 data['move_2'] = game.move_2
                 data['score'] = score_game(game.targets,game.move_2)
     emit('update', data, to=user.user)
+
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print("Client disconnected")
+
+
+@socketio.on('status')
+def change_status(data):
+    user = db.session.query(User).filter(User.user==data['username']).first()
+    user.status = data['status']
+    app.logger.info(f'Changing status for user: {user.user} to: {user.status}')
+    db.session.commit()
+
+
+@socketio.on('strike')
+def change_strike(data):
+    user = db.session.query(User).filter(User.user==data['username']).first()
+    user.strikes += 1
+    app.logger.info(f'Adding a strike for user: {user.user}')
+    db.session.commit()
 
 
 @socketio.on('move')
@@ -394,7 +416,7 @@ def move(data):
             if sum(score_game(game.targets,game.move_2).values()) == 3:
                 time.sleep(2.5)
             else:
-                time.sleep(7)
+                time.sleep(6)
         
         # create new game
         if game.task=='train' and (game.n + 1 < n_rounds['train']):
@@ -416,5 +438,3 @@ def move(data):
         # refresh
         emit('refresh', to=user.user)
         emit('refresh', to=user.partner)
-
-
