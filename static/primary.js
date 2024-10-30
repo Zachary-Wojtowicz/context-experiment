@@ -11,7 +11,12 @@ $(document).ready(function() {
 
         var intervalID;
         var wait_timeout = 10;
-        var characters_avail = 10;
+        if (task=='train') {
+            var characters_avail = 70;    
+        } else if (task=='test') {
+            var characters_avail = 10;
+        }
+
         var n_targets_train = 1;
         var timerPaused = false;
 
@@ -210,10 +215,10 @@ $(document).ready(function() {
         }
 
         function randomMove() {
-            socket.emit('strike', {'username': username});
+            // socket.emit('strike', {'username': username});
             if (turn==0) {
                 $('#message-gallery .textbox:eq(0)').val(function(index, currentValue) {
-                    return currentValue + '@'; // Add a blank space to the existing value
+                    return currentValue + '...'; // Add a blank space to the existing value
                 });
             } else if (turn==1) {
                 if ($('#outputValues').val()=='') {
@@ -222,7 +227,7 @@ $(document).ready(function() {
             }
         }
 
-        function updateTimerDisplay(timer) {
+        function updateTimerDisplay(timer,red) {
             minutes = parseInt(timer / 60, 10);
             seconds = parseInt(timer % 60, 10);
             seconds = seconds < 10 ? "0" + seconds : seconds;
@@ -230,27 +235,24 @@ $(document).ready(function() {
             var timerDisplay = $('#time-count');
             timerDisplay.html(minutes + ":" + seconds);
 
-            if (timer < 5) {
+
+            $('#timer').removeClass('red');
+            if (red && (timer < 5)) {
                 $('#timer').addClass('red');
-            } else {
-                $('#timer').removeClass('red');
             }
         }
 
         function setMoveTimer(timer) {
             clearInterval(timerInterval);
-            timerPaused = false;
             timerInterval = setInterval(function () {
-                if (!timerPaused) {
-                    timer--;
-                    if (timer > 0) {
-                        updateTimerDisplay(timer);
-                    } else {
-                        randomMove();
-                        submitMove('send_button');
-                        clearInterval(timerInterval);
-                        // socket.emit('partner_timeout', {'username': username, 'partner': partner});
-                    }
+                timer--;
+                if (timer > 0) {
+                    updateTimerDisplay(timer,true);
+                } else {
+                    randomMove();
+                    submitMove('send_button',false);
+                    clearInterval(timerInterval);
+                    // socket.emit('partner_timeout', {'username': username, 'partner': partner});
                 }
             }, 1000);
         }
@@ -262,7 +264,7 @@ $(document).ready(function() {
             timerInterval = setInterval(function() {
                 if (!timerPaused) {
                     timer--;
-                    updateTimerDisplay(timer);
+                    updateTimerDisplay(timer,true);
                     if (timer === 0) {
                         timerPaused = true;
                         if (typeof partner == 'undefined') {
@@ -278,7 +280,17 @@ $(document).ready(function() {
             }, 1000);
         }
 
-        function submitMove(id) {
+        function setFeedbackTimer(timer) {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(function () {
+                timer--;
+                if (timer > 0) {
+                    updateTimerDisplay(timer,false);
+                }
+            }, 1000);
+        }
+
+        function submitMove(id,intentional) {
 
             if (turn==2) {
                 if (id=="send_button") {
@@ -320,7 +332,7 @@ $(document).ready(function() {
 
             if (valid) {
 
-                socket.emit('move', {'text': jsonData, 'username': username, 'task': task});
+                socket.emit('move', {'text': jsonData, 'username': username, 'task': task, 'intentional': intentional});
                 $("#send_button").prop("disabled", true);
 
             }
@@ -335,7 +347,6 @@ $(document).ready(function() {
 
         var currentHighlighted = null;
         var timerInterval = null;
-        var timer = 10;
         var gearBlack = new Image();
         var gearBlue = new Image();
         var imagesLoaded = 0; // Keep track of the number of loaded images
@@ -392,7 +403,7 @@ $(document).ready(function() {
         // Click event handler for gears
         $('.gear').click(function() {
             if ($(this).is(currentHighlighted)) {
-                if (timerPaused) {
+                if (timerPaused && (typeof partner == 'undefined')) {
                     socket.emit('status', {'username': username, 'status': 'waiting'});
                 }
                 var currentRotation = $(this).data('rotation') || 0;
@@ -450,8 +461,8 @@ $(document).ready(function() {
         //     socket.emit('typing', {'partner': partner});
         // });
 
-        $(".button").click(function() {
-            submitMove($(this).attr('id'));
+        $(".submit").click(function() {
+            submitMove($(this).attr('id'),true);
         });
 
 
@@ -478,6 +489,7 @@ $(document).ready(function() {
 
         socket.on('done', function(data) {
             console.log("finishing for " + username);
+            socket.emit('disconnect');
             const message = JSON.stringify({
                 type: data['type']
             });
@@ -508,6 +520,7 @@ $(document).ready(function() {
                 clone = (data['task']=='test')
                 partner = data['partner'];
                 strikes = data['strikes'];
+                score = data['score'];
 
                 $("#n-remaining").text(data['n_remaining']);
                 $("#wait").hide();
@@ -523,6 +536,7 @@ $(document).ready(function() {
                 $("#rounds").css('visibility','visible');
                 updateCharacterCount();
                 $('#char-info').css('visibility', 'hidden');
+                $('#timer').css('visibility', 'visible');
 
                 if (task=='train') {
                     $('#message-gallery .textbox:gt('+(n_targets_train-1).toString()+')').remove();
@@ -541,12 +555,14 @@ $(document).ready(function() {
                     setHeaders('gallery-left','Target');
                     setHeaders('feedback-gallery','Guess');
                     $('#role').text('Your Role: Describer');
-                    
+
+                    $('#char-info').css('visibility', 'visible');
+
+                    $('#message-gallery .textbox:eq(0)').attr('maxlength', String(characters_avail));
 
                     if (task=='test') {
 
                         $('#message-gallery .textbox:gt(0)').remove();
-                        $('#message-gallery .textbox:eq(0)').attr('maxlength', String(characters_avail));
                         // show the middle feedback, i.e. the delivered tile
                         $('#feedback-gallery .header:gt(0)').remove();
                         $('#feedback-gallery .header:eq(0)').text('Delivered')
@@ -560,7 +576,7 @@ $(document).ready(function() {
                         $('#gallery-left .header:eq(0)').text('Target');
                         $('#gallery-left .header:gt(0)').remove();
                         $('#feedback_header').text('Delivered');
-                        $('#char-info').css('visibility', 'visible');
+                        
 
                     }
 
@@ -583,11 +599,11 @@ $(document).ready(function() {
                             $('#banner').css('color', 'red');
                         }
 
-                        setMoveTimer(20);
+                        setMoveTimer(45);
 
                     } else if (turn==1) {
 
-                        $("#banner").text("While your partner moves, click the highlighted (blue) gear at least once every 10 seconds.");
+                        $("#banner").text("While your partner moves, click the highlighted (blue) gear at least once every 10 seconds. If you earn too many timeout strikes, your submission may be rejected.");
                         $('#banner').css('color', 'black');
 
                         $("#wait").show();
@@ -600,12 +616,18 @@ $(document).ready(function() {
                         
                         if (task=='train') {
 
-                            $("#banner").text("Feedback.");
+                            $("#banner").text("Feedback: Review your performance below.");
                             $('#banner').css('color', 'black');
                             $("#feedback-gallery").css('visibility', 'visible');
                             arrangePics("feedback-gallery",$.parseJSON(data['move_2']));
                             feedback(data['score']);
                             addMessages($.parseJSON(data['move_1']));
+                            
+                            if (score==1) {
+                                setFeedbackTimer(2.5);    
+                            } else {
+                                setFeedbackTimer(6);
+                            }
 
                         } else if (task=='test') {
 
@@ -614,7 +636,7 @@ $(document).ready(function() {
 
                             if (groundTruth[0]==move_2[1]) {
 
-                                submitMove('send_button');
+                                submitMove('send_button',false);
 
                             } else {
 
@@ -629,7 +651,9 @@ $(document).ready(function() {
                                 addMessages($.parseJSON(data['move_1']));
                                 $("#send_button").prop("disabled", false);
                                 $("#send_button").text('Accept');
-                                $("#send_button2").css('visibility', 'visible');    
+                                $("#send_button2").css('visibility', 'visible');
+
+                                setMoveTimer(25);    
 
                             }
 
@@ -667,7 +691,7 @@ $(document).ready(function() {
                         // need to re-arrange pictures & get IDs *after* resetting draggable
                         arrangePics("gallery-right",$.parseJSON(data['start_r']));
                         getIdsOfImages();
-                        $("#banner").text("While your partner moves, click the highlighted (blue) gear at least once every 10 seconds.");
+                        $("#banner").text("While your partner moves, click the highlighted (blue) gear at least once every 10 seconds. If you earn too many timeout strikes, your submission may be rejected.");
                         $('#banner').css('color', 'black');
                         $('.textbox').val('');
                         $(".draggable").draggable("disable");
@@ -681,7 +705,7 @@ $(document).ready(function() {
                     } else if (turn==1) {
 
                         if (task=='train') {
-                            $("#banner").text("Your Turn: Drag tiles from the gallery to guess the target.");
+                            $("#banner").text("Your Turn: Drag a tile from the gallery to guess the target tile.");
                             $('#banner').css('color', 'red');
                         } else {
                             $("#banner").text("Your Turn: Select both tiles.");
@@ -700,7 +724,7 @@ $(document).ready(function() {
 
                         $("#send_button").prop("disabled", false);
                         
-                        setMoveTimer(20);
+                        setMoveTimer(25);
 
                     } else if (turn==2) {   
 
@@ -709,7 +733,7 @@ $(document).ready(function() {
 
                         if (task=='train') {
 
-                            $("#banner").text("Feedback.");
+                            $("#banner").text("Feedback: Review your performance below.");
                             $('#banner').css('color', 'black');
                             $("#feedback-gallery").css('visibility', 'visible');
                             var groundTruth = $.parseJSON(data['targets']);
@@ -719,10 +743,23 @@ $(document).ready(function() {
                             arrangePics("feedback-gallery",pics);
                             feedback(data['score']);
 
+                            if (score==1) {
+                                setFeedbackTimer(2.5);    
+                            } else {
+                                setFeedbackTimer(6);
+                            }
+                            
+
                         } else {
 
-                            $("#banner").text("While your partner moves, click the highlighted (blue) gear at least once every 10 seconds.");
+                            $("#banner").text("While your partner moves, click the highlighted (blue) gear at least once every 10 seconds. If you earn too many timeout strikes, your submission may be rejected.");
                             $('#banner').css('color', 'black');
+
+                            $("#wait").show();
+                            $("#game").hide();
+                            $("#button-container").css('visibility', 'hidden');
+
+                            setWaitTimer();
 
                         }
 

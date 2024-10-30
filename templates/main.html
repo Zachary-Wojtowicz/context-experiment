@@ -181,7 +181,7 @@
             width: 150px
         }
 
-        .button {
+        .submit {
             background-color: #008CBA; /* blue */
             border: none;
             color: white;
@@ -241,7 +241,6 @@
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.0/jquery-ui.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
     <script type="text/javascript" src="/static/primary.js"></script>
-    <!-- <script type="text/javascript" src="/static/gears.js"></script> -->
 
 </head>
 
@@ -277,10 +276,6 @@
                     <canvas class="gear" id="gear-9"></canvas>
                 </div>
 
-                <!-- Timer Section -->
-<!--                 <div class="timer" id="timer">
-                    Match Time: <span id="time-value">10</span> seconds
-                </div> -->
             </div>
         </div>
 
@@ -336,6 +331,7 @@
                         <div class="droppable">
                             <p class="drop-text">Drag tile here</p><img src="" alt="">
                         </div>
+                        <!-- <h4 class="header">($2 bonus if different & accepted) </h4> -->
 
                         <h4 class="header">Target 3</h4>
                         <div class="droppable">
@@ -377,13 +373,13 @@
 
         <div class="container">
             <div class="info-container" style="padding:5px;">
-                <p id="timer" class="info timer">Time to Move: <span id="time-count"></span></p>
+                <p id="timer" class="info timer">Time Remaining: <span id="time-count"></span></p>
                 <p id="rounds" class="info">Rounds Remaining: <span id="n-remaining"></span></p>
             </div>
 
             <div id="button-container">
-                <button id="send_button" class="button">Submit!</button>
-                <button id="send_button2" class="button" style="margin-left: 50px;">Challenge</button>
+                <button id="send_button" class="submit">Submit!</button>
+                <button id="send_button2" class="submit" style="margin-left: 50px;">Challenge</button>
             </div>
         </div>
 
