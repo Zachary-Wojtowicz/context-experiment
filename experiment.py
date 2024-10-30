@@ -322,7 +322,7 @@ def score_game(s1,s2):
 
 
 socketio.start_background_task(process_waiting)
-socketio.start_background_task(process_playing)
+# socketio.start_background_task(process_playing)
 
 
 ##################################################################
