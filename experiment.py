@@ -11,7 +11,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import Integer, String, func
-from flask_socketio import SocketIO, send, emit, join_room
+from flask_socketio import SocketIO, send, emit, join_room, disconnect
 from dataclasses import dataclass
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -399,7 +399,14 @@ def update(data):
 
 @socketio.on('userDisconnect')
 def handle_disconnect():
-    print("Client disconnected")
+    disconnect()
+    print("Client gracefully disconnected")
+
+
+@socketio.on("disconnect")
+def handle_disconnect():
+    print("Client abruptly disconnected")
+    pass
 
 
 @socketio.on('status')
