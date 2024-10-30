@@ -182,7 +182,7 @@ def create_pair(user_1,user_2,task,new=True):
     time.sleep(.25)
     create_game(pair_num, task, 0)
     for i in [0, 1]:
-        app.logger.info(f'Added user: {pair_users[i].user} to pair: {pair_num} in role: {user.role}')
+        app.logger.info(f'Added user: {pair_users[i].user} to pair: {pair_num} in role: {pair_users[i].role}')
         socketio.emit('refresh', room=pair_users[i].user)
     return
 
@@ -397,7 +397,7 @@ def update(data):
     emit('update', data, to=user.user)
 
 
-@socketio.on('disconnect')
+@socketio.on('userDisconnect')
 def handle_disconnect():
     print("Client disconnected")
 

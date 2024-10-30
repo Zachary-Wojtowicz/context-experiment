@@ -20,7 +20,6 @@ $(document).ready(function() {
         var n_targets_train = 1;
         var timerPaused = false;
 
-
         function initDrag(clone) {
 
             let draggedFromSortableRight = false;
@@ -489,7 +488,7 @@ $(document).ready(function() {
 
         socket.on('done', function(data) {
             console.log("finishing for " + username);
-            socket.emit('disconnect');
+            socket.emit('userDisconnect');
             const message = JSON.stringify({
                 type: data['type']
             });
