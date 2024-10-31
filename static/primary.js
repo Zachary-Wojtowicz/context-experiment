@@ -599,7 +599,7 @@ $(document).ready(function() {
                             $('#banner').css('color', 'red');
                         }
 
-                        setMoveTimer(40);
+                        setMoveTimer(45);
 
                     } else if (turn==1) {
 

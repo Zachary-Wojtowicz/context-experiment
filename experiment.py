@@ -353,6 +353,7 @@ def test():
 @socketio.on('connected')
 def handle_connected(data):
     app.logger.info(f'socket connected for user: {data['username']}, task: {data['task']}, assignment: {data['assignment']}')
+    app.logger.info(f"Client connected with address: {request.remote_addr}")
     join_room(data['username'])
     process_user(data['username'], data['task'], data['assignment'])
     socketio.emit('refresh', room=data['username'])
@@ -405,8 +406,11 @@ def handle_disconnect():
 
 @socketio.on("disconnect")
 def handle_disconnect():
+    # Check if client address exists in the clients dict before attempting to delete it
+    client_address = request.remote_addr  # Or use a similar approach to fetch client address
+    if client_address in self.server.clients:
+        del self.server.clients[client_address]
     app.logger.info("Client abruptly disconnected")
-    pass
 
 
 @socketio.on('status')
