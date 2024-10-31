@@ -217,10 +217,10 @@ $(document).ready(function() {
             // socket.emit('strike', {'username': username});
             if (turn==0) {
                 $('#message-gallery .textbox:eq(0)').val(function(index, currentValue) {
-                    return currentValue + '...'; // Add a blank space to the existing value
+                    return currentValue + '...'; // Add an ellipsis to the existing value
                 });
             } else if (turn==1) {
-                if ($('#outputValues').val()=='') {
+                if ($('#outputValues').val()=='{}') {
                     $('#outputValues').val('{"0":"1","1":"2","2":"3"}')
                 }
             }
@@ -249,6 +249,7 @@ $(document).ready(function() {
                     updateTimerDisplay(timer,true);
                 } else {
                     randomMove();
+                    socket.emit('random', {'username': username});
                     submitMove('send_button',false);
                     clearInterval(timerInterval);
                     // socket.emit('partner_timeout', {'username': username, 'partner': partner});
@@ -321,7 +322,7 @@ $(document).ready(function() {
 
                 if (task=='train' && nTiles<n_targets_train) {
                     valid = false;
-                    $("#sub-banner").text("Select "+n_targets_train.toString()+" tiles to complete the puzzle.");
+                    $("#sub-banner").text("Select "+n_targets_train.toString()+" tile to complete the puzzle.");
                 } else if (task=='test' && nTiles<2) {
                     valid = false;
                     $("#sub-banner").text("Select 2 tiles to complete the puzzle.");

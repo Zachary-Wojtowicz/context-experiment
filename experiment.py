@@ -148,8 +148,9 @@ def create_game(pair_num, task, n):
 
 def create_pair(user_1,user_2,task,new=True):
     pair_users = [user_1,user_2]
+    # shuffle roles on every pairing or re-pairing
+    random.shuffle(pair_users)
     if new:
-        random.shuffle(pair_users)
         pair_num = db.session.query(func.max(User.pair)).scalar()
         if pair_num:
             pair_num += 1
@@ -159,13 +160,13 @@ def create_pair(user_1,user_2,task,new=True):
         pair_num = user_1.pair_train
     for i in [0, 1]:
         user = pair_users[i]
-        if new:
-            if i == 0:
-                user.role = 'sender'
-                user.partner = pair_users[i+1].user
-            else:
-                user.role = 'receiver'
-                user.partner = pair_users[i-1].user
+        # if new:
+        if i == 0:
+            user.role = 'sender'
+            user.partner = pair_users[i+1].user
+        else:
+            user.role = 'receiver'
+            user.partner = pair_users[i-1].user
         user.status = 'playing'
         user.time_join = None
         user.time_last = time.time()
@@ -216,7 +217,7 @@ def process_user(username, task, assignment):
                 user.status=='playing'
                 emit('refresh', to=user.user)
             else:
-                app.logger.info(f'Issuing (done) for user: {user.user} and partner: {user.partner}')
+                app.logger.info(f'issuing (done) for user: {user.user} and partner: {user.partner}')
                 user.status = 'done'
                 user.time_join = None
                 emit('done', {'type':'complete'}, to=user.user)
@@ -292,10 +293,11 @@ def process_playing():
                     partner = db.session.query(User).filter(User.user==user.partner).first()
                     user.status = 'timeout_play'
                     partner.status = 'timeout_partner'
+                    db.session.commit()
+                    
                     for i in [user, partner]:
                         app.logger.info(f'Timeout (playing) for user: {i.user}, task: {i.task}, assignment: {i.assignment}')
                         socketio.emit('done', {'type':'timeout'}, to=i.user)
-                        db.session.commit()
                         time.sleep(.1)
 
         time.sleep(5)
@@ -323,7 +325,7 @@ def score_game(s1,s2):
 
 
 socketio.start_background_task(process_waiting)
-# socketio.start_background_task(process_playing)
+socketio.start_background_task(process_playing)
 
 
 ##################################################################
@@ -355,7 +357,7 @@ def test():
 def handle_connected(data):
     app.logger.info(f'socket connected for user: {data['username']}, task: {data['task']}, assignment: {data['assignment']}')
     connected_clients[request.sid] = {"connected": True}
-    app.logger.info(f"Client connected with session ID: {request.sid}")
+    app.logger.info(f"client connected with session ID: {request.sid}")
     join_room(data['username'])
     process_user(data['username'], data['task'], data['assignment'])
     socketio.emit('refresh', room=data['username'])
@@ -405,7 +407,7 @@ def handle_user_disconnect():
     # Graceful disconnect
     if request.sid in connected_clients:
         del connected_clients[request.sid]
-    app.logger.info(f"Client {request.sid} gracefully disconnected")
+    app.logger.info(f"client {request.sid} gracefully disconnected")
     disconnect()
 
 
@@ -414,14 +416,14 @@ def handle_disconnect():
     # Handle unexpected disconnection
     if request.sid in connected_clients:
         del connected_clients[request.sid]
-    app.logger.info(f"Client {request.sid} abruptly disconnected")
+    app.logger.info(f"client {request.sid} abruptly disconnected")
 
 
 @socketio.on('status')
 def change_status(data):
     user = db.session.query(User).filter(User.user==data['username']).first()
     user.status = data['status']
-    app.logger.info(f'Changing status for user: {user.user} to: {user.status}')
+    app.logger.info(f'changing status for user: {user.user} to: {user.status}')
     db.session.commit()
 
 
@@ -429,8 +431,13 @@ def change_status(data):
 def change_strike(data):
     user = db.session.query(User).filter(User.user==data['username']).first()
     user.strikes += 1
-    app.logger.info(f'Adding a strike for user: {user.user}')
+    app.logger.info(f'adding a strike for user: {user.user}')
     db.session.commit()
+
+
+@socketio.on('random')
+def report_random(data):
+    app.logger.info(f'randomly moving for user: {data['username']}')
 
 
 @socketio.on('move')
@@ -438,8 +445,8 @@ def move(data):
     user = db.session.query(User).filter(User.user==data['username']).first()
     game = db.session.query(Game).filter(Game.pair==user.pair,Game.task==user.task).order_by(Game.i.desc()).first()
 
-    if data['intentional']:
-        user.time_last = time.time()
+    # if data['intentional']:
+    user.time_last = time.time()
 
     times_record = json.loads(game.times)
     times_record[game.turn] = time.time() - times_record['s']
@@ -462,7 +469,7 @@ def move(data):
 
     if (game.turn==2 and game.task=='train') or (game.turn==3):
         if game.task=='train':
-            if sum(score_game(game.targets,game.move_2).values()) == n_tiles_train:
+            if sum(score_game(game.targets,game.move_2).values()) == n_targets_train:
                 time.sleep(2.5)
             else:
                 time.sleep(6)
