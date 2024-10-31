@@ -42,6 +42,7 @@ app = Flask(__name__)
 app.secret_key = "super secret key"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///project.db"
 socketio = SocketIO(app, async_mode='gevent', cors_allowed_origins="*", message_queue='redis://localhost:6379')
+connected_clients = {}
 
 if __name__ != '__main__':
     gunicorn_logger = logging.getLogger('gunicorn.error')
@@ -353,7 +354,8 @@ def test():
 @socketio.on('connected')
 def handle_connected(data):
     app.logger.info(f'socket connected for user: {data['username']}, task: {data['task']}, assignment: {data['assignment']}')
-    app.logger.info(f"Client connected with address: {request.remote_addr}")
+    connected_clients[request.sid] = {"connected": True}
+    app.logger.info(f"Client connected with session ID: {request.sid}")
     join_room(data['username'])
     process_user(data['username'], data['task'], data['assignment'])
     socketio.emit('refresh', room=data['username'])
@@ -398,19 +400,21 @@ def update(data):
     emit('update', data, to=user.user)
 
 
-@socketio.on('userDisconnect')
-def handle_disconnect():
+@socketio.on("userDisconnect")
+def handle_user_disconnect():
+    # Graceful disconnect
+    if request.sid in connected_clients:
+        del connected_clients[request.sid]
+    app.logger.info(f"Client {request.sid} gracefully disconnected")
     disconnect()
-    app.logger.info("Client gracefully disconnected")
 
 
 @socketio.on("disconnect")
 def handle_disconnect():
-    # Check if client address exists in the clients dict before attempting to delete it
-    client_address = request.remote_addr  # Or use a similar approach to fetch client address
-    if client_address in self.server.clients:
-        del self.server.clients[client_address]
-    app.logger.info("Client abruptly disconnected")
+    # Handle unexpected disconnection
+    if request.sid in connected_clients:
+        del connected_clients[request.sid]
+    app.logger.info(f"Client {request.sid} abruptly disconnected")
 
 
 @socketio.on('status')
