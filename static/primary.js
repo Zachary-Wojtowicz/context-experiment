@@ -322,10 +322,10 @@ $(document).ready(function() {
 
                 if (task=='train' && nTiles<n_targets_train) {
                     valid = false;
-                    $("#sub-banner").text("Select "+n_targets_train.toString()+" tile to complete the puzzle.");
+                    $("#sub-banner").text("Select "+n_targets_train.toString()+" shape to complete the puzzle.");
                 } else if (task=='test' && nTiles<2) {
                     valid = false;
-                    $("#sub-banner").text("Select 2 tiles to complete the puzzle.");
+                    $("#sub-banner").text("Select 2 shapes to complete the puzzle.");
                 }
 
             }
@@ -593,7 +593,7 @@ $(document).ready(function() {
                         $("#send_button").prop("disabled", false);
                         
                         if (task=='train') {
-                            $("#banner").text("Your Turn: Describe the target tiles.");
+                            $("#banner").text("Your Turn: Describe the target shape.");
                             $('#banner').css('color', 'red');
                         } else {
                             $("#banner").text("Your Turn: Send a message to your partner.");
@@ -679,7 +679,7 @@ $(document).ready(function() {
                         $('#message-gallery .textbox:gt(0)').remove();
                         $('#message-gallery .header:gt(0)').remove();
                         $('#gallery-left .header:eq(0)').text('True Target');
-                        $('#gallery-left .header:eq(1)').text('Tile to Deliver');
+                        $('#gallery-left .header:eq(1)').text('Shape to Deliver');
                         $('#gallery-left .textbox:eq(2)').remove();
                         $('#gallery-left .header:eq(2)').remove();
                         $('#gallery-left .droppable:eq(2)').remove();
@@ -706,10 +706,10 @@ $(document).ready(function() {
                     } else if (turn==1) {
 
                         if (task=='train') {
-                            $("#banner").text("Your Turn: Drag a tile from the gallery to guess the target tile.");
+                            $("#banner").text("Your Turn: Drag a shape from the gallery to guess the target shape.");
                             $('#banner').css('color', 'red');
                         } else {
-                            $("#banner").text("Your Turn: Select both tiles.");
+                            $("#banner").text("Your Turn: Select both shapes.");
                             $('#banner').css('color', 'red');
                         }
 

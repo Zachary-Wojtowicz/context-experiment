@@ -22,7 +22,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 
 n_rounds = {'train':12, 'test':7}
-timeout = 240
+timeout = 300
 n_targets_train = 1
 n_tiles_train = 4
 
