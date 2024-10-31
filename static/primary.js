@@ -310,7 +310,7 @@ $(document).ready(function() {
 
                 if (!Object.values(foo).join('')) {
                     valid = false;
-                    $("#sub-banner").text("Write messages for your partner.");
+                    $("#sub-banner").text("Write a message for your partner.");
                 }
 
             } else if (role=='receiver') {
@@ -488,11 +488,12 @@ $(document).ready(function() {
 
         socket.on('done', function(data) {
             console.log("finishing for " + username);
-            socket.emit('userDisconnect');
             const message = JSON.stringify({
                 type: data['type']
             });
             window.parent.postMessage(message,"*");
+            socket.emit('userDisconnect');
+            socket.disconnect();
         });
 
         // var typingTimeout;
@@ -598,7 +599,7 @@ $(document).ready(function() {
                             $('#banner').css('color', 'red');
                         }
 
-                        setMoveTimer(45);
+                        setMoveTimer(40);
 
                     } else if (turn==1) {
 

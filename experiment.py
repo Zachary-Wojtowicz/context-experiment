@@ -400,12 +400,12 @@ def update(data):
 @socketio.on('userDisconnect')
 def handle_disconnect():
     disconnect()
-    print("Client gracefully disconnected")
+    app.logger.info("Client gracefully disconnected")
 
 
 @socketio.on("disconnect")
 def handle_disconnect():
-    print("Client abruptly disconnected")
+    app.logger.info("Client abruptly disconnected")
     pass
 
 
