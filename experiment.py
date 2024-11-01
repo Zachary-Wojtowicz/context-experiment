@@ -22,7 +22,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 
 n_rounds = {'train':12, 'test':7}
-timeout = 240
+timeout_waiting = 240
+timeout_playing = 120
 n_targets_train = 1
 n_tiles_train = 4
 
@@ -272,7 +273,7 @@ def process_waiting():
 
             for user in users:
                 if user.time_join:
-                    if time.time() - user.time_join > timeout:
+                    if time.time() - user.time_join > timeout_waiting:
                         user.status = 'timeout_wait'
                         user.time_join = None
                         app.logger.info(f'Timeout (waiting) for user: {user.user}, task: {user.task}, assignment: {user.assignment}')
@@ -288,7 +289,7 @@ def process_playing():
             users = db.session.query(User).filter(User.status=='playing').all()
 
             for user in users:
-                if time.time() - user.time_last > timeout:
+                if time.time() - user.time_last > timeout_playing:
 
                     partner = db.session.query(User).filter(User.user==user.partner).first()
                     user.status = 'timeout_play'
