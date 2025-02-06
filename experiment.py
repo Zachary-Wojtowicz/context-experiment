@@ -172,9 +172,9 @@ def create_pair(user_1,user_2,task,new=True):
             pair_num += 1
         else:
             pair_num = 1
+        condition = random.choice(['T_T','T_F','F_T','F_F'])
     else:
         pair_num = user_1.pair_train
-    condition = random.choice(['T_T','T_F','F_T','F_F'])
     for i in [0, 1]:
         user = pair_users[i]
         # if new:
