@@ -167,9 +167,9 @@ $(document).ready(function() {
                     let imgSrc = $(this).attr("src");
 
                     // Check if the imgSrc is valid (not null or empty)
-                    if (imgSrc && imgSrc.match(/image_(\d+)\.png/)) {
+                    if (imgSrc && imgSrc.match(/image_(?:tangrams_|faces_)(\d+)\.png/)) {
                         // Extract the image ID using regex and push it to the values array
-                        let imgId = imgSrc.match(/image_(\d+)\.png/)[1];
+                        let imgId = imgSrc.match(/image_(?:tangrams_|faces_)(\d+)\.png/)[1];
                         values.push(imgId);
                     }
                 });
