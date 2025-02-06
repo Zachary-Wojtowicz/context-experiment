@@ -87,7 +87,8 @@ class User(db.Model):
     task: Mapped[int]
     strikes: Mapped[int]
     assignment: Mapped[str]
-    stimuli: Mapped[str]
+    condition: Mapped[str] = mapped_column(nullable=True)
+    # stimuli: Mapped[str]
     time_join: Mapped[float] = mapped_column(nullable=True)
     time_last: Mapped[float] = mapped_column(nullable=True)
 
@@ -106,6 +107,7 @@ class Game(db.Model):
     move_2: Mapped[str] = mapped_column(nullable=True)
     move_3: Mapped[str] = mapped_column(nullable=True)
     times: Mapped[str]
+    stimuli: Mapped[str]
 
 
 if not os.path.isfile('./instance/project.db'):
@@ -122,17 +124,28 @@ if not os.path.isfile('./instance/project.db'):
 ##################################################################
 
 
-def create_game(pair_num, task, n):
-    app.logger.info(f'creating game; pair: {pair_num} task: {task} n: {n}')
+def create_game(pair_num, task, n, condition):
+    app.logger.info(f'creating game; pair: {pair_num} task: {task} n: {n} condition:{condition}')
+
+    conditions = condition.split('_')
 
     if task == 'train':
         start_s = random_images(9,9)
         start_r = random_images(9,9)
         targets = json.dumps({'0':str(train_sequence[n])})
+        if conditions[0]=='T':
+            stimuli = 'tangrams'
+        else:
+            stimuli = 'faces'
+        
     elif task == 'test':
         start_s = random_images(9,9)
         start_r = random_images(9,9)
         targets = json.dumps({'0':str(test_sequence[n])})
+        if conditions[1]=='T':
+            stimuli = 'tangrams'
+        else:
+            stimuli = 'faces'
     game = Game(
         pair = pair_num,
         task = task,
@@ -141,7 +154,8 @@ def create_game(pair_num, task, n):
         start_s = start_s,
         start_r = start_r,
         targets = targets,
-        times = json.dumps({'s':time.time()})
+        times = json.dumps({'s':time.time()}),
+        stimuli = stimuli
     )
     db.session.add(game)
     db.session.commit()
@@ -160,6 +174,7 @@ def create_pair(user_1,user_2,task,new=True):
             pair_num = 1
     else:
         pair_num = user_1.pair_train
+    condition = random.choice(['T_T','T_F','F_T','F_F'])
     for i in [0, 1]:
         user = pair_users[i]
         # if new:
@@ -170,6 +185,7 @@ def create_pair(user_1,user_2,task,new=True):
             user.role = 'receiver'
             user.partner = pair_users[i-1].user
         user.status = 'playing'
+        user.condition = condition
         user.time_join = None
         user.time_last = time.time()
         app.logger.info('paired user: ' + user.user)
@@ -184,14 +200,14 @@ def create_pair(user_1,user_2,task,new=True):
             user.role_test = user.role
     db.session.commit()
     time.sleep(.25)
-    create_game(pair_num, task, 0)
+    create_game(pair_num, task, 0, condition)
     for i in [0, 1]:
-        app.logger.info(f'Added user: {pair_users[i].user} to pair: {pair_num} in role: {pair_users[i].role}')
+        app.logger.info(f'Added user: {pair_users[i].user} to pair: {pair_num} in role: {pair_users[i].role} and condition: {pair_users[i].condition}')
         socketio.emit('refresh', room=pair_users[i].user)
     return
 
 
-def process_user(username, task, assignment, stimuli):
+def process_user(username, task, assignment):
     user = db.session.query(User).filter(User.user==username).first()
     if user is None:
         user = User(
@@ -207,7 +223,9 @@ def process_user(username, task, assignment, stimuli):
             assignment = assignment,
             time_join = time.time(),
             time_last = None,
-            stimuli = stimuli
+            condition = None
+            # ,
+            # stimuli = stimuli
         )
         db.session.add(user)
     else:
@@ -278,7 +296,7 @@ def process_waiting():
                     if time.time() - user.time_join > timeout_waiting:
                         user.status = 'timeout_wait'
                         user.time_join = None
-                        app.logger.info(f'Timeout (waiting) for user: {user.user}, task: {user.task}, assignment: {user.assignment}, stimuli: {i.stimuli}')
+                        app.logger.info(f'Timeout (waiting) for user: {user.user}, task: {user.task}, assignment: {user.assignment}')
                         socketio.emit('done', {'type':'timeout'}, to=user.user)
                         db.session.commit()
                         time.sleep(.1)
@@ -299,7 +317,7 @@ def process_playing():
                     db.session.commit()
                     
                     for i in [user, partner]:
-                        app.logger.info(f'Timeout (playing) for user: {i.user}, task: {i.task}, assignment: {i.assignment}, stimuli: {i.stimuli}')
+                        app.logger.info(f'Timeout (playing) for user: {i.user}, task: {i.task}, assignment: {i.assignment}')
                         socketio.emit('done', {'type':'timeout'}, to=i.user)
                         time.sleep(.1)
 
@@ -358,11 +376,11 @@ def test():
 
 @socketio.on('connected')
 def handle_connected(data):
-    app.logger.info(f'socket connected for user: {data['username']}, task: {data['task']}, assignment: {data['assignment']}, stimuli: {data['stimuli']}')
+    app.logger.info(f'socket connected for user: {data['username']}, task: {data['task']}, assignment: {data['assignment']}')
     connected_clients[request.sid] = {"connected": True}
     app.logger.info(f"client connected with session ID: {request.sid}")
     join_room(data['username'])
-    process_user(data['username'], data['task'], data['assignment'], data['stimuli'])
+    process_user(data['username'], data['task'], data['assignment'])
     socketio.emit('refresh', room=data['username'])
 
 
@@ -385,6 +403,7 @@ def update(data):
             if game.turn>=2:
                 data['move_2'] = game.move_2
                 data['score'] = score_game(game.targets,game.move_2)
+            data['stimuli'] = game.stimuli
     emit('update', data, to=user.user)
 
 
@@ -462,9 +481,9 @@ def move(data):
         
         # create new game
         if game.task=='train' and (game.n + 1 < n_rounds['train']):
-            create_game(user.pair, 'train', game.n + 1)
+            create_game(user.pair, 'train', game.n + 1, user.condition)
         elif game.task=='test' and (game.n + 1 < n_rounds['test']):
-            create_game(user.pair, 'test', game.n + 1)
+            create_game(user.pair, 'test', game.n + 1, user.condition)
         else:
             partner = db.session.query(User).filter(User.user==user.partner).first()
             for i in [user, partner]:
