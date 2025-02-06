@@ -87,6 +87,7 @@ class User(db.Model):
     task: Mapped[int]
     strikes: Mapped[int]
     assignment: Mapped[str]
+    stimuli: Mapped[str]
     time_join: Mapped[float] = mapped_column(nullable=True)
     time_last: Mapped[float] = mapped_column(nullable=True)
 
@@ -190,7 +191,7 @@ def create_pair(user_1,user_2,task,new=True):
     return
 
 
-def process_user(username, task, assignment):
+def process_user(username, task, assignment, stimuli):
     user = db.session.query(User).filter(User.user==username).first()
     if user is None:
         user = User(
@@ -205,7 +206,8 @@ def process_user(username, task, assignment):
             strikes = 0,
             assignment = assignment,
             time_join = time.time(),
-            time_last = None
+            time_last = None,
+            stimuli = stimuli
         )
         db.session.add(user)
     else:
@@ -276,7 +278,7 @@ def process_waiting():
                     if time.time() - user.time_join > timeout_waiting:
                         user.status = 'timeout_wait'
                         user.time_join = None
-                        app.logger.info(f'Timeout (waiting) for user: {user.user}, task: {user.task}, assignment: {user.assignment}')
+                        app.logger.info(f'Timeout (waiting) for user: {user.user}, task: {user.task}, assignment: {user.assignment}, stimuli: {i.stimuli}')
                         socketio.emit('done', {'type':'timeout'}, to=user.user)
                         db.session.commit()
                         time.sleep(.1)
@@ -297,7 +299,7 @@ def process_playing():
                     db.session.commit()
                     
                     for i in [user, partner]:
-                        app.logger.info(f'Timeout (playing) for user: {i.user}, task: {i.task}, assignment: {i.assignment}')
+                        app.logger.info(f'Timeout (playing) for user: {i.user}, task: {i.task}, assignment: {i.assignment}, stimuli: {i.stimuli}')
                         socketio.emit('done', {'type':'timeout'}, to=i.user)
                         time.sleep(.1)
 
@@ -356,29 +358,12 @@ def test():
 
 @socketio.on('connected')
 def handle_connected(data):
-    app.logger.info(f'socket connected for user: {data['username']}, task: {data['task']}, assignment: {data['assignment']}')
+    app.logger.info(f'socket connected for user: {data['username']}, task: {data['task']}, assignment: {data['assignment']}, stimuli: {data['stimuli']}')
     connected_clients[request.sid] = {"connected": True}
     app.logger.info(f"client connected with session ID: {request.sid}")
     join_room(data['username'])
-    process_user(data['username'], data['task'], data['assignment'])
+    process_user(data['username'], data['task'], data['assignment'], data['stimuli'])
     socketio.emit('refresh', room=data['username'])
-
-
-# @socketio.on('typing')
-# def handle_typing(data):
-#     partner = data['partner']
-#     emit('notify_typing', to=partner)
-
-
-# @socketio.on('partner_timeout')
-# def partner_timeout(data):
-#     user = db.session.query(User).filter(User.user==data['username']).first()
-#     user.status = 'timeout'
-#     user.time = None
-#     app.logger.info(f'Partner timeout for user: {user.user}, task: {user.task}, assignment: {user.assignment}, partner: {user.partner}')
-#     socketio.emit('done', {'type':'timeout'}, to=user.user)
-#     socketio.emit('done', {'type':'timeout'}, to=user.partner)
-#     db.session.commit()
 
 
 @socketio.on('update')

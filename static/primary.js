@@ -7,6 +7,7 @@ $(document).ready(function() {
         username = url.searchParams.get("username");
         task = url.searchParams.get("task");
         assignment = url.searchParams.get("assignment");
+        stimuli = url.searchParams.get("stimuli");
         timerInterval = null;
 
         var intervalID;
@@ -143,7 +144,7 @@ $(document).ready(function() {
             // Loop through the images inside the container
             container.children('div').each(function(index) {
                 if (index in ordering) {
-                    let image_src = "/static/image_" + ordering[index] + ".png";
+                    let image_src = "/static/image_" + stimuli + "_" + ordering[index] + ".png";
                     // Find the img tag inside the current child div and update its src
                     $(this).children('img').attr("src", image_src);
                 } else {
@@ -479,7 +480,7 @@ $(document).ready(function() {
         }
 
         socket.on('connect', function() {
-            socket.emit('connected', {'username': username, 'task': task, 'assignment':assignment});
+            socket.emit('connected', {'username': username, 'task': task, 'assignment':assignment, 'stimuli':stimuli});
         });
 
         socket.on('refresh', function() {
