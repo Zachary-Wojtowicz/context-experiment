@@ -172,7 +172,8 @@ def create_pair(user_1,user_2,task,new=True):
             pair_num += 1
         else:
             pair_num = 1
-        condition = random.choice(['T_T','T_F','F_T','F_F'])
+        # condition = random.choice(['T_T','T_F','F_T','F_F'])
+        condition = random.choice(['F_F'])
     else:
         pair_num = user_1.pair_train
         condition = user_1.condition
@@ -225,8 +226,6 @@ def process_user(username, task, assignment):
             time_join = time.time(),
             time_last = None,
             condition = None
-            # ,
-            # stimuli = stimuli
         )
         db.session.add(user)
     else:

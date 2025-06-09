@@ -7,7 +7,7 @@ $(document).ready(function() {
         username = url.searchParams.get("username");
         task = url.searchParams.get("task");
         assignment = url.searchParams.get("assignment");
-        stimuli = url.searchParams.get("stimuli");
+        // stimuli = url.searchParams.get("stimuli");
         timerInterval = null;
 
         var intervalID;
@@ -480,8 +480,8 @@ $(document).ready(function() {
         }
 
         socket.on('connect', function() {
-            // socket.emit('connected', {'username': username, 'task': task, 'assignment':assignment});
-            socket.emit('connected', {'username': username, 'task': task, 'assignment':assignment, 'stimuli':stimuli});
+            socket.emit('connected', {'username': username, 'task': task, 'assignment':assignment});
+            // socket.emit('connected', {'username': username, 'task': task, 'assignment':assignment, 'stimuli':stimuli});
         });
 
         socket.on('refresh', function() {
@@ -751,8 +751,7 @@ $(document).ready(function() {
                                 setFeedbackTimer(2.5);    
                             } else {
                                 setFeedbackTimer(6);
-                            }
-                            
+                            }                            
 
                         } else {
 
