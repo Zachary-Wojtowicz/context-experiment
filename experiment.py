@@ -133,7 +133,7 @@ def create_game(pair_num, task, n, condition):
         start_s = random_images(9,9)
         start_r = random_images(9,9)
         targets = json.dumps({'0':str(train_sequence[n])})
-        if conditions[0]=='T':
+        if conditions[0]=='tangrams':
             stimuli = 'tangrams'
         else:
             stimuli = 'faces'
@@ -142,7 +142,7 @@ def create_game(pair_num, task, n, condition):
         start_s = random_images(9,9)
         start_r = random_images(9,9)
         targets = json.dumps({'0':str(test_sequence[n])})
-        if conditions[1]=='T':
+        if conditions[1]=='tangrams':
             stimuli = 'tangrams'
         else:
             stimuli = 'faces'
@@ -172,8 +172,8 @@ def create_pair(user_1,user_2,task,new=True):
             pair_num += 1
         else:
             pair_num = 1
-        # condition = random.choice(['T_T','T_F','F_T','F_F'])
-        condition = random.choice(['F_F'])
+        # condition = random.choice(['tangrams_tangrams','tangrams_faces','faces_tangrams','faces_faces'])
+        condition = random.choice(['faces_faces'])
     else:
         pair_num = user_1.pair_train
         condition = user_1.condition
